@@ -14,9 +14,8 @@ walk_right = [ pygame.image.load('images walk/r1.png').convert_alpha(),
               pygame.image.load('images walk/r2.png').convert_alpha()]
 walk_left = [ pygame.image.load('images walk/l1.png').convert_alpha(),
               pygame.image.load('images walk/l2.png').convert_alpha()]
+stay = [pygame.image.load('images walk/stay.png').convert_alpha()]
 
-tank = pygame.image.load('images/tank.png').convert_alpha()
-tank_x = 620
 player_anim_count = 0
 bg_x =0 
 bg_y =0
@@ -34,19 +33,17 @@ while running:
     screen.blit(bg, (bg_x + 2000, bg_y))
     screen.blit(bg, (bg_x, bg_y + 2000))
     screen.blit(bg, (bg_x, bg_y - 2000))
-    screen.blit(tank, (tank_x, 300))
     
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-         screen.blit(walk_left[int(player_anim_count)], (player_x, player_y))
-    else:
-        screen.blit(walk_right[int(player_anim_count)], (player_x, player_y))
-    
+    if not any(keys):
+        screen.blit(stay)
     if keys[pygame.K_LEFT] and player_x > 300:
         player_x -= player_speed
+        screen.blit(walk_left[int(player_anim_count)], (player_x, player_y))
         bg_x +=10
     elif keys[pygame.K_RIGHT] and player_x < 1600:
         player_x += player_speed
+        screen.blit(walk_right[int(player_anim_count)], (player_x, player_y))
         bg_x -=10
     
     if keys[pygame.K_UP] and player_y > 120:
@@ -59,8 +56,6 @@ while running:
         player_anim_count = 0
     else:
         player_anim_count = player_anim_count + 0.125
-        
-    tank_x -=3.3
     
     pygame.display.update()
     
