@@ -11,6 +11,8 @@ def load_assets():
 
 
 ### MAP TEXTURES
+FLOOR_TEXTURE_PATH = "textures/floor"
+WALL_TEXTURE_PATH = "textures/walls"
 def _load_texture_folder(folder, tile_size):
     textures = []
     if not os.path.exists(folder):
@@ -40,12 +42,10 @@ def load_player_sprites():
     player_walk1 = pygame.image.load("textures/temp_player/walk1.png").convert_alpha()
     player_walk2 = pygame.image.load("textures/temp_player/walk2.png").convert_alpha()
 
-    anim_player_walk = 
-    {
+    anim_player_walk = {
         "walk": [player_walk1, player_walk2]
     }
-    anim_player_idle = 
-    {
+    anim_player_idle = {
         "idle": player_idle
     }
 

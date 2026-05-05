@@ -1,15 +1,8 @@
 import random
 
-# =========================
-# CONFIG
-# =========================
 
-WIDTH = 80
-HEIGHT = 50
-TILE_SIZE = 16
 
-FLOOR_TEXTURE_PATH = "textures/floor"
-WALL_TEXTURE_PATH = "textures/walls"
+
 
 # Tile types
 WALL = 0
