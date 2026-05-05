@@ -160,38 +160,38 @@ def generate_level():
 # MAIN
 # =========================
 
-pygame.init()
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-clock = pygame.time.Clock()
+#pygame.init()
+#screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+#clock = pygame.time.Clock()
 
-floor_tiles = load_textures(FLOOR_TEXTURE_PATH)
-wall_tiles = load_textures(WALL_TEXTURE_PATH)
+#floor_tiles = load_textures(FLOOR_TEXTURE_PATH)
+#wall_tiles = load_textures(WALL_TEXTURE_PATH)
 
-grid, rooms = generate_level()
-tilemap = build_tilemap(grid, floor_tiles, wall_tiles)
+#grid, rooms = generate_level()
+#tilemap = build_tilemap(grid, floor_tiles, wall_tiles)
 
-running = True
+#running = True
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+#while running:
+    #for event in pygame.event.get():
+        #if event.type == pygame.QUIT:
+            #running = False
 
         # Press R to regenerate level
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_r:
-                grid, rooms = generate_level()
-                tilemap = build_tilemap(grid, floor_tiles, wall_tiles)
+        #if event.type == pygame.KEYDOWN:
+            #if event.key == pygame.K_r:
+                #grid, rooms = generate_level()
+                #tilemap = build_tilemap(grid, floor_tiles, wall_tiles)
 
-    screen.fill((0, 0, 0))
+    #screen.fill((0, 0, 0))
 
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
-            tile = tilemap[y][x]
-            if tile:
-                screen.blit(tile, (x * TILE_SIZE, y * TILE_SIZE))
+    #for y in range(HEIGHT):
+      #  for x in range(WIDTH):
+     #       tile = tilemap[y][x]
+    #        if tile:
+   #             screen.blit(tile, (x * TILE_SIZE, y * TILE_SIZE))
 
-    pygame.display.flip()
-    clock.tick(60)
+  #  pygame.display.flip()
+ #   clock.tick(60)
 
-pygame.quit()
+#pygame.quit()

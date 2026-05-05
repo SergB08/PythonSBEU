@@ -1,7 +1,7 @@
 import pygame
 import math
 import settings
-from controls import MOVE_KEYS
+from controls import MOVE_KEYS, ROLL_KEY
 
 class Player:
     def __init__(self, idle_anim, walk_anim):
@@ -20,19 +20,19 @@ class Player:
     def update(self, keys, dt):
         moving = False
 
-        if keys[pygame.K_LEFT]:
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.x -= settings.PLAYER_SPEED * dt * 60
             moving = True
 
-        if keys[pygame.K_RIGHT]:
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.x += settings.PLAYER_SPEED * dt * 60
             moving = True
 
-        if keys[pygame.K_UP]:
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
             self.y -= settings.PLAYER_SPEED * dt * 60
             moving = True
 
-        if keys[pygame.K_DOWN]:
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.y += settings.PLAYER_SPEED * dt * 60
             moving = True
 
