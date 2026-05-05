@@ -2,6 +2,7 @@ import pygame
 from entities.player import Player
 from assets import load_assets, load_player_sprites
 from tickrate import TickRate
+from levelGenerator import build_tilemap
 import settings
 
 pygame.init()
