@@ -46,19 +46,19 @@ class Player:
         new_x = self.world_x
         new_y = self.world_y
 
-        if keys[pygame.K_LEFT]:
+        if keys[pygame.K_a]:
             new_x -= speed
             self.direction = "left"
 
-        if keys[pygame.K_RIGHT]:
+        if keys[pygame.K_d]:
             new_x += speed
             self.direction = "right"
 
-        if keys[pygame.K_UP]:
+        if keys[pygame.K_w]:
             new_y -= speed
             self.direction = "up"
 
-        if keys[pygame.K_DOWN]:
+        if keys[pygame.K_s]:
             new_y += speed
             self.direction = "down"
 
@@ -80,7 +80,7 @@ class Player:
         draw_x = settings.WIDTH // 2 - self.width // 2
         draw_y = settings.HEIGHT // 2 - self.height // 2
 
-        if any(keys[k] for k in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]):
+        if any(keys[k] for k in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]):
             img = self.animations[self.direction][frame]
         else:
             img = self.idle[self.direction]

@@ -5,7 +5,7 @@ from assets import load_assets, load_player_sprites
 from tickrate import TickRate
 
 from level.generation import generate_world
-from level.rendering import draw_world
+from level.rendering import draw_world, draw_minimap
 
 import settings
 
@@ -42,6 +42,8 @@ while running:
     screen.fill((0, 0, 0))
 
     draw_world(screen, world, floor_tiles, wall_tiles, camera_x, camera_y)
+    
+    draw_minimap(screen, world, player)
 
     player.draw(screen, keys)
 

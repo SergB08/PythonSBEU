@@ -1,3 +1,4 @@
+import pygame
 import random
 import settings
 from level.world import FLOOR, WALL
@@ -21,3 +22,35 @@ def draw_world(screen, world, floor_tiles, wall_tiles, camera_x, camera_y):
             elif tile == WALL:
                 img = wall_tiles[0]
                 screen.blit(img, (draw_x, draw_y))
+
+def draw_minimap(screen, world, player):
+
+    scale = 4  # ⬅️ ВАЖЛИВО: НЕ 0.05, а нормальний піксельний scale
+
+    offset_x = settings.WIDTH - len(world.tiles[0]) * scale - settings.MINIMAP_PADDING - 60
+    offset_y = settings.HEIGHT - len(world.tiles) * scale - settings.MINIMAP_PADDING + 30
+
+    for y, row in enumerate(world.tiles):
+        for x, tile in enumerate(row):
+
+            px = offset_x + x * scale
+            py = offset_y + y * scale
+
+            color = (200, 200, 200) if tile == 0 else (40, 40, 40)
+
+            pygame.draw.rect(
+                screen,
+                color,
+                (px, py, scale, scale)
+            )
+
+    # PLAYER
+    player_px = offset_x + (player.world_x / settings.TILE_SIZE) * scale
+    player_py = offset_y + (player.world_y / settings.TILE_SIZE) * scale
+
+    pygame.draw.circle(
+        screen,
+        (255, 0, 0),
+        (int(player_px), int(player_py)),
+        3
+    )
