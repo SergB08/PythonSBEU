@@ -1,13 +1,16 @@
 import random
-from level.world import World, WALL, FLOOR
+
+from level.world import World, WALL
 from level.rooms import generate_rooms
 
 
-def generate_world(width, height, floor_count):
+def generate_world(width, height, floor_count, level=1):
 
     world = World()
 
-    # ===== 1. створення базового світу =====
+    world.level = level
+
+    # ===== СТВОРЕННЯ СВІТУ =====
 
     for y in range(height):
 
@@ -28,14 +31,12 @@ def generate_world(width, height, floor_count):
         world.tiles.append(row)
         world.floor_variant.append(floor_row)
 
-    # ===== 2. генерація кімнат =====
+    # ===== ГЕНЕРАЦІЯ КІМНАТ =====
 
     generate_rooms(world)
 
-    # ===== 3. SPAWN =====
-    # spawn вже записується в rooms.py
+    # ===== ГАРАНТІЯ SPAWN =====
 
-    # але гарантія (на випадок багів)
     if world.spawn_x == 0 and world.spawn_y == 0:
 
         world.spawn_x = width // 2

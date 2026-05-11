@@ -1,50 +1,101 @@
 import random
 from level.world import FLOOR
 
+ROOM_SIZE = 12
 
-def create_room(world, x, y, w, h):
-    for ry in range(y, y + h):
-        for rx in range(x, x + w):
-            world.tiles[ry][rx] = FLOOR
+
+def create_room(world, grid_x, grid_y):
+
+    start_x = grid_x * ROOM_SIZE + 1
+    start_y = grid_y * ROOM_SIZE + 1
+
+    for y in range(start_y, start_y + ROOM_SIZE - 2):
+        for x in range(start_x, start_x + ROOM_SIZE - 2):
+
+            world.tiles[y][x] = FLOOR
+
+    center_x = start_x + ROOM_SIZE // 2 - 1
+    center_y = start_y + ROOM_SIZE // 2 - 1
+
+    return center_x, center_y
 
 
 def connect_rooms(world, x1, y1, x2, y2):
+
     for x in range(min(x1, x2), max(x1, x2) + 1):
         world.tiles[y1][x] = FLOOR
+
     for y in range(min(y1, y2), max(y1, y2) + 1):
         world.tiles[y][x2] = FLOOR
 
 
 def generate_rooms(world):
-    w = len(world.tiles[0])
-    h = len(world.tiles)
 
-    rooms_centers = []
-    rw, rh = 12, 12
-    rx = w // 2 - rw // 2
-    ry = h // 2 - rh // 2
+    grid_w = 5
+    grid_h = 5
 
-    create_room(world, rx, ry, rw, rh)
+    start_room = (2, 2)
 
-    cx = rx + rw // 2
-    cy = ry + rh // 2
+    room_positions = [start_room]
+    taken = {start_room}
 
-    world.spawn_x = cx
-    world.spawn_y = cy
+    room_count = min(3 + world.level, 8)
 
-    rooms_centers.append((cx, cy))
-    for _ in range(20):
-        rw = random.randint(5, 10)
-        rh = random.randint(5, 10)
+    directions = [
+        (1, 0),
+        (-1, 0),
+        (0, 1),
+        (0, -1)
+    ]
 
-        rx = random.randint(1, w - rw - 2)
-        ry = random.randint(1, h - rh - 2)
+    while len(room_positions) < room_count:
 
-        create_room(world, rx, ry, rw, rh)
+        base = random.choice(room_positions)
 
-        cx = rx + rw // 2
-        cy = ry + rh // 2
+        dx, dy = random.choice(directions)
 
-        connect_rooms(world, rooms_centers[-1][0], rooms_centers[-1][1], cx, cy)
+        new_room = (
+            base[0] + dx,
+            base[1] + dy
+        )
 
-        rooms_centers.append((cx, cy))
+        if new_room in taken:
+            continue
+
+        if not (0 <= new_room[0] < grid_w and 0 <= new_room[1] < grid_h):
+            continue
+
+        room_positions.append(new_room)
+        taken.add(new_room)
+
+    centers = []
+
+    for room in room_positions:
+
+        cx, cy = create_room(
+            world,
+            room[0],
+            room[1]
+        )
+
+        centers.append((cx, cy))
+
+    for i in range(1, len(centers)):
+
+        connect_rooms(
+            world,
+            centers[i - 1][0],
+            centers[i - 1][1],
+            centers[i][0],
+            centers[i][1]
+        )
+
+    world.rooms = centers
+
+    world.spawn_x = centers[0][0]
+    world.spawn_y = centers[0][1]
+
+    final_room = centers[-1]
+
+    world.ladder_x = final_room[0]
+    world.ladder_y = final_room[1]
