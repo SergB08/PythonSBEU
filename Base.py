@@ -2,7 +2,7 @@ import pygame
 import random
 
 from entities.player import Player
-from assets import load_assets, load_player_sprites
+from assets import load_assets, load_player_sprites, load_player_sprites2
 from tickrate import TickRate
 
 from level.generation import generate_world
@@ -17,13 +17,14 @@ screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
 tick = TickRate(settings.FPS)
 
 icon, floor_tiles, wall_tiles = load_assets()
-animations, idles = load_player_sprites()
+animations, idles = load_player_sprites() ## UDALIT
+playerIdle, playerWalk = load_player_sprites2()
 
 pygame.display.set_icon(icon)
 
 world = generate_world(settings.WORLD_WIDTH, settings.WORLD_HEIGHT, len(floor_tiles))
 
-player = Player(animations, idles)
+player = Player(playerIdle, playerWalk)#Player(animations, idles)
 
 player.world_x = world.spawn_x * settings.TILE_SIZE
 player.world_y = world.spawn_y * settings.TILE_SIZE
@@ -55,4 +56,3 @@ while running:
             running = False
 
 pygame.quit()
-#sdv

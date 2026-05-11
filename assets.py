@@ -60,7 +60,7 @@ def load_assets():
 
     return icon, floor_tiles, wall_tiles
 
-
+### UDALIT vvv
 def load_player_sprites():
 
     up1 = pygame.image.load(
@@ -117,12 +117,32 @@ def load_player_sprites():
         "left": [l1, l2],
         "right": [r1, r2]
     }
-
     idles = {
         "up": stayup,
         "down": staydown,
         "left": stayl,
         "right": stayr
     }
-
     return animations, idles
+###UDALIT ^^^   
+    
+#Player sprites
+def load_player_sprites2():
+    tempidle = pygame.image.load(
+        "textures/playerTemp/idleTemp.png"
+    ).convert_alpha()
+    tempwalk1 = pygame.image.load(
+        "textures/playerTemp/walk1Temp.png"
+    ).convert_alpha()
+    tempwalk2 = pygame.image.load(
+        "textures/playerTemp/walk2Temp.png"
+    ).convert_alpha()
+#Player animations
+    playerIdle = {
+        "tempIdleAnim": tempidle
+    }
+    playerWalk = {
+        "tempWalk": [tempwalk1,tempwalk2]
+    }
+    return playerIdle, playerWalk
+
