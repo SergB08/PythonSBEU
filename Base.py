@@ -1,5 +1,5 @@
 import pygame
-<<<<<<< HEAD
+import random
 
 from entities.player import Player
 from assets import load_assets, load_player_sprites
@@ -122,3 +122,4 @@ while running:
 >>>>>>> main
 
 pygame.quit()
+#sdv
