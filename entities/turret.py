@@ -1,6 +1,7 @@
 import pygame
 import math
 import settings
+pygame.mixer.init()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -161,6 +162,7 @@ class Turret:
     HEAD_ROT_SPEED = 150
 
     ANGRY_ANIM_SPEED = 0.20
+    SHOOT_SOUND = None
 
     # ── Sprite orientation correction ──────────────────────────────────────
     # pygame.transform.rotate(img, angle) rotates CCW.
@@ -267,7 +269,12 @@ class Turret:
 
     def _shoot(self):
         self.bullets.append(Bullet(self.world_x, self.world_y, self.head_angle))
-
+        if Turret.SHOOT_SOUND is None:
+            Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+        Turret.SHOOT_SOUND.play()
+        
+        self._fire_timer = self.FIRE_COOLDOWN
+            
     def take_damage(self, amount, camera_x, camera_y):
         """Call with camera offsets so the damage number spawns at screen pos."""
         self.hp -= amount
