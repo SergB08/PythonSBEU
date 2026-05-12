@@ -1,0 +1,345 @@
+import pygame
+import math
+import settings
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Floating damage number
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DamageNumber:
+    """A small number that floats upward and fades out after a hit."""
+
+    FONT = None   # initialised on first use (pygame must be ready)
+
+    def __init__(self, screen_x, screen_y, amount, color=(255, 60, 60)):
+        self.x      = float(screen_x)
+        self.y      = float(screen_y)
+        self.amount = amount
+        self.color  = color
+        self.alpha  = 255
+        self.alive  = True
+        self._vy    = -80   # px/s upward drift
+
+    def update(self, dt):
+        self.y     += self._vy * dt
+        self.alpha -= 320 * dt          # fade ~0.8 s
+        if self.alpha <= 0:
+            self.alive = False
+
+    def draw(self, screen):
+        if DamageNumber.FONT is None:
+            DamageNumber.FONT = pygame.font.SysFont(None, 30, bold=True)
+        surf = DamageNumber.FONT.render(f"-{self.amount}", True, self.color)
+        surf.set_alpha(max(0, int(self.alpha)))
+        screen.blit(surf, (int(self.x) - surf.get_width() // 2, int(self.y)))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Bullet direction helper
+#
+#  Convention: angle 0 = sprite/bullet points UP (pygame CCW)
+#    vx = -sin(θ) * speed
+#    vy = -cos(θ) * speed
+#
+#  Verification:
+#    θ=0   → vx=0,      vy=-speed   flies UP      ✓
+#    θ=-90 → vx=+speed, vy=0        flies RIGHT   ✓  (CW = right)
+#    θ=90  → vx=-speed, vy=0        flies LEFT    ✓  (CCW = left)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _angle_to_velocity(angle_deg, speed):
+    rad = math.radians(angle_deg)
+    return -math.sin(rad) * speed, -math.cos(rad) * speed
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Bullet drawing helper – elongated shape aligned with travel direction
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
+    spd = math.hypot(vx, vy)
+    if spd < 1:
+        pygame.draw.circle(surface, body_col, (sx, sy), width)
+        return
+    nx, ny = vx / spd, vy / spd    # unit along travel
+    px, py = -ny, nx                 # perpendicular
+
+    hw = width / 2
+    # tail (blunt end) and tip (pointed end)
+    tail = (sx - nx * length * 0.35, sy - ny * length * 0.35)
+    tip  = (sx + nx * length * 0.65, sy + ny * length * 0.65)
+
+    c1 = (tail[0] + px * hw,       tail[1] + py * hw)
+    c2 = (tail[0] - px * hw,       tail[1] - py * hw)
+    c3 = (tip[0]  - px * hw * 0.2, tip[1]  - py * hw * 0.2)
+    c4 = (tip[0]  + px * hw * 0.2, tip[1]  + py * hw * 0.2)
+
+    pygame.draw.polygon(surface, body_col, [c1, c2, c3, c4])
+    pygame.draw.line(surface, rim_col,
+                     (int(c1[0]), int(c1[1])), (int(c4[0]), int(c4[1])), 1)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Bullet:
+    """Turret bullet — brass look."""
+
+    SPEED    = 2000
+    DAMAGE   = 10
+    LIFETIME = 1.8
+    LENGTH   = 14
+    WIDTH    = 4
+
+    def __init__(self, x, y, angle_deg):
+        self.x  = float(x)
+        self.y  = float(y)
+        self.vx, self.vy = _angle_to_velocity(angle_deg, self.SPEED)
+        self.alive     = True
+        self._lifetime = self.LIFETIME
+
+    def update(self, dt, world):
+        from level.world import WALL
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self._lifetime -= dt
+        if self._lifetime <= 0:
+            self.alive = False
+            return
+        ts = settings.TILE_SIZE
+        tx = int(self.x // ts)
+        ty = int(self.y // ts)
+        h, w = len(world.tiles), len(world.tiles[0])
+        if 0 <= ty < h and 0 <= tx < w:
+            if world.tiles[ty][tx] == WALL:
+                self.alive = False
+        else:
+            self.alive = False
+
+    def draw(self, screen, camera_x, camera_y):
+        sx = int(self.x - camera_x)
+        sy = int(self.y - camera_y)
+        _draw_bullet(screen, sx, sy, self.vx, self.vy,
+                     self.LENGTH, self.WIDTH,
+                     (210, 140, 30), (255, 220, 100))
+
+
+class PlayerBullet(Bullet):
+    """Player bullet — steel look."""
+
+    SPEED    = 2000
+    DAMAGE   = 25
+    LIFETIME = 1.5
+    LENGTH   = 16
+    WIDTH    = 4
+
+    def draw(self, screen, camera_x, camera_y):
+        sx = int(self.x - camera_x)
+        sy = int(self.y - camera_y)
+        _draw_bullet(screen, sx, sy, self.vx, self.vy,
+                     self.LENGTH, self.WIDTH,
+                     (170, 210, 235), (225, 245, 255))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+class Turret:
+    """
+    Stationary enemy turret.
+    Layers: legs (static) + head (rotates toward player).
+    States: idle → alert (calm head) → firing (angry head + shooting)
+
+    Tune firerate:
+        FIRE_COOLDOWN = 0.6   # seconds between shots (lower = faster)
+    """
+
+    MAX_HP         = 80
+    DETECT_RANGE   = 500
+    FIRE_RANGE     = 550
+    AIM_TIME       = 1.0
+    FIRE_COOLDOWN  = 0.1    # ← tune this
+    HEAD_ROT_SPEED = 150
+
+    ANGRY_ANIM_SPEED = 0.20
+
+    # ── Sprite orientation correction ──────────────────────────────────────
+    # pygame.transform.rotate(img, angle) rotates CCW.
+    # At angle=0 the head should face UP on screen.
+    # If your headcalm.png/headangry PNGs face a different direction
+    # by default, adjust HEAD_SPRITE_OFFSET:
+    #   0   → image already faces UP
+    #   90  → image faces LEFT  (rotate 90° CW to fix → offset = -90)
+    #   -90 → image faces RIGHT (rotate 90° CCW to fix → offset = 90) ← try this
+    #   180 → image faces DOWN
+    # We'll use -90 here because your images appear to face right by default.
+    HEAD_SPRITE_OFFSET = -90
+
+    def __init__(self, world_x, world_y, legs_img, head_calm, head_angry):
+        self.world_x = float(world_x)
+        self.world_y = float(world_y)
+
+        self.hp    = self.MAX_HP
+        self.alive = True
+
+        self.legs_img = legs_img
+        legs_size     = legs_img.get_size()
+        angr_head_size = head_angry[0].get_size()
+
+        # Force every head frame to exactly legs_img size so rotation
+        # never changes the apparent scale between calm and angry.
+        self.head_calm  = pygame.transform.smoothscale(head_calm, legs_size)
+        self.head_angry = [pygame.transform.smoothscale(f, angr_head_size)
+                           for f in head_angry]
+
+        self.head_angle   = 0.0
+        self.state        = "idle"
+        self._aim_timer   = 0.0
+        self._fire_timer  = 0.0
+        self._angry_frame = 0.0
+
+        self.bullets       = []
+        self.damage_numbers = []   # floating damage popups
+
+    # ── helpers ──────────────────────────────────────────────────────────── #
+
+    def _angle_to_world_pos(self, tx, ty):
+        """Return pygame-CCW angle so head faces world point (tx, ty)."""
+        dx =  tx - self.world_x
+        dy = -(ty - self.world_y)       # flip y: screen down = world neg
+        return math.degrees(math.atan2(dy, dx)) - 90
+
+    def _dist(self, px, py):
+        return math.hypot(px - self.world_x, py - self.world_y)
+
+    def _rotate_toward(self, target, dt):
+        diff = (target - self.head_angle + 180) % 360 - 180
+        step = self.HEAD_ROT_SPEED * dt
+        if abs(diff) <= step:
+            self.head_angle = target
+            return True
+        self.head_angle += math.copysign(step, diff)
+        return False
+
+    # ── update ───────────────────────────────────────────────────────────── #
+
+    def update(self, dt, player, world):
+        if not self.alive:
+            return
+
+        px, py = player.world_x, player.world_y
+        dist   = self._dist(px, py)
+        target = self._angle_to_world_pos(px, py)
+
+        for b in self.bullets:
+            b.update(dt, world)
+        self.bullets = [b for b in self.bullets if b.alive]
+
+        for dn in self.damage_numbers:
+            dn.update(dt)
+        self.damage_numbers = [d for d in self.damage_numbers if d.alive]
+
+        if self.state == "idle":
+            if dist <= self.DETECT_RANGE:
+                self.state      = "alert"
+                self._aim_timer = self.AIM_TIME
+            self._rotate_toward(0, dt * 0.3)
+
+        elif self.state == "alert":
+            self._rotate_toward(target, dt)
+            if dist > self.DETECT_RANGE * 1.2:
+                self.state = "idle"
+                return
+            self._aim_timer -= dt
+            if self._aim_timer <= 0:
+                self.state       = "firing"
+                self._fire_timer = 0.0
+
+        elif self.state == "firing":
+            aligned = self._rotate_toward(target, dt)
+            self._angry_frame += self.ANGRY_ANIM_SPEED * dt * 60
+            if dist > self.DETECT_RANGE * 1.2:
+                self.state = "idle"
+                return
+            self._fire_timer -= dt
+            if self._fire_timer <= 0 and dist <= self.FIRE_RANGE and aligned:
+                self._shoot()
+                self._fire_timer = self.FIRE_COOLDOWN
+
+    def _shoot(self):
+        self.bullets.append(Bullet(self.world_x, self.world_y, self.head_angle))
+
+    def take_damage(self, amount, camera_x, camera_y):
+        """Call with camera offsets so the damage number spawns at screen pos."""
+        self.hp -= amount
+        if self.hp < 0:
+            self.hp = 0
+        # Spawn floating number above the turret's screen position
+        sx = int(self.world_x - camera_x)
+        sy = int(self.world_y - camera_y) - self.legs_img.get_height() // 2 - 20
+        self.damage_numbers.append(DamageNumber(sx, sy, amount, (255, 80, 30)))
+        if self.hp <= 0:
+            self.alive = False
+
+    # ── draw ─────────────────────────────────────────────────────────────── #
+
+    def draw(self, screen, camera_x, camera_y):
+        if not self.alive:
+            return
+
+        sx = int(self.world_x - camera_x)
+        sy = int(self.world_y - camera_y)
+
+        margin = 250
+        if (sx < -margin or sx > settings.WIDTH  + margin or
+                sy < -margin or sy > settings.HEIGHT + margin):
+            return
+
+        # Legs — static
+        legs_rect = self.legs_img.get_rect(center=(sx, sy))
+        screen.blit(self.legs_img, legs_rect.topleft)
+
+        # Head — rotated
+        if self.state == "firing":
+            fi  = int(self._angry_frame) % len(self.head_angry)
+            src = self.head_angry[fi]
+        else:
+            src = self.head_calm
+
+        rotated = pygame.transform.rotate(src, self.head_angle + self.HEAD_SPRITE_OFFSET)
+        hr      = rotated.get_rect(center=(sx, sy))
+        screen.blit(rotated, hr.topleft)
+
+        self._draw_health_bar(screen, sx, sy)
+
+        for b in self.bullets:
+            b.draw(screen, camera_x, camera_y)
+
+        # Damage numbers are in screen-space (spawned with camera offset)
+        for dn in self.damage_numbers:
+            dn.draw(screen)
+
+    def _draw_health_bar(self, screen, sx, sy):
+        bar_w = 120
+        bar_h = 10
+        bx    = sx - bar_w // 2
+        by    = sy - self.legs_img.get_height() // 2 - 18
+        ratio = max(0.0, self.hp / self.MAX_HP)
+
+        # Shadow
+        pygame.draw.rect(screen, (10, 10, 10), (bx - 1, by - 1, bar_w + 2, bar_h + 2))
+        # Empty
+        pygame.draw.rect(screen, (60, 0, 0), (bx, by, bar_w, bar_h))
+        # Fill
+        fill = (int(255 * (1 - ratio)), int(220 * ratio), 0)
+        if ratio > 0:
+            pygame.draw.rect(screen, fill, (bx, by, int(bar_w * ratio), bar_h))
+        # Border
+        pygame.draw.rect(screen, (180, 180, 180), (bx, by, bar_w, bar_h), 1)
+
+        # HP number centred in bar
+        if DamageNumber.FONT is None:
+            DamageNumber.FONT = pygame.font.SysFont(None, 30, bold=True)
+        font = pygame.font.SysFont(None, 18)
+        txt  = font.render(f"{self.hp}/{self.MAX_HP}", True, (255, 255, 255))
+        screen.blit(txt, (bx + bar_w // 2 - txt.get_width() // 2,
+                           by + bar_h // 2 - txt.get_height() // 2))

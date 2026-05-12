@@ -11,7 +11,6 @@ def create_room(world, grid_x, grid_y):
 
     for y in range(start_y, start_y + ROOM_SIZE - 2):
         for x in range(start_x, start_x + ROOM_SIZE - 2):
-
             world.tiles[y][x] = FLOOR
 
     center_x = start_x + ROOM_SIZE // 2 - 1
@@ -51,13 +50,8 @@ def generate_rooms(world):
     while len(room_positions) < room_count:
 
         base = random.choice(room_positions)
-
         dx, dy = random.choice(directions)
-
-        new_room = (
-            base[0] + dx,
-            base[1] + dy
-        )
+        new_room = (base[0] + dx, base[1] + dy)
 
         if new_room in taken:
             continue
@@ -71,23 +65,14 @@ def generate_rooms(world):
     centers = []
 
     for room in room_positions:
-
-        cx, cy = create_room(
-            world,
-            room[0],
-            room[1]
-        )
-
+        cx, cy = create_room(world, room[0], room[1])
         centers.append((cx, cy))
 
     for i in range(1, len(centers)):
-
         connect_rooms(
             world,
-            centers[i - 1][0],
-            centers[i - 1][1],
-            centers[i][0],
-            centers[i][1]
+            centers[i - 1][0], centers[i - 1][1],
+            centers[i][0],     centers[i][1]
         )
 
     world.rooms = centers
@@ -96,6 +81,17 @@ def generate_rooms(world):
     world.spawn_y = centers[0][1]
 
     final_room = centers[-1]
-
     world.ladder_x = final_room[0]
     world.ladder_y = final_room[1]
+
+    # ---- Turret spawn positions (one per non-spawn room) ----
+    # Stored as tile coordinates; actual Turret objects are created in Base.py
+    # after the turret sprites are loaded.
+    turret_spawn_tiles = []
+    for i, (cx, cy) in enumerate(centers):
+        if i == 0:
+            continue   # skip spawn room
+        # Offset slightly from centre so it doesn't block the corridor
+        turret_spawn_tiles.append((cx, cy))
+
+    world.turret_spawns = turret_spawn_tiles

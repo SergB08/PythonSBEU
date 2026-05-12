@@ -17,3 +17,6 @@ class World:
 
         self.ladder_x = None
         self.ladder_y = None
+
+        # List of (tile_x, tile_y) where turrets should be placed
+        self.turret_spawns = []

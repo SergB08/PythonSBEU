@@ -60,6 +60,7 @@ def load_assets():
 
     return icon, floor_tiles, wall_tiles
 
+
 ### UDALIT vvv
 def load_player_sprites():
 
@@ -124,9 +125,10 @@ def load_player_sprites():
         "right": stayr
     }
     return animations, idles
-###UDALIT ^^^   
-    
-#Player sprites
+###UDALIT ^^^
+
+
+# Player sprites
 def load_player_sprites2():
     tempidle = pygame.image.load(
         "textures/playerTemp/idleTemp.png"
@@ -137,12 +139,31 @@ def load_player_sprites2():
     tempwalk2 = pygame.image.load(
         "textures/playerTemp/walk2Temp.png"
     ).convert_alpha()
-#Player animations
+
     playerIdle = {
         "tempIdleAnim": tempidle
     }
     playerWalk = {
-        "tempWalk": [tempwalk1,tempwalk2]
+        "tempWalk": [tempwalk1, tempwalk2]
     }
     return playerIdle, playerWalk
 
+
+
+def load_turret_sprites():
+    """
+    Returns (legs_img, head_calm_img, [head_angry1_img, head_angry2_img])
+    All images are scaled to TURRET_SIZE × TURRET_SIZE.
+    """
+    def _load(filename):
+        img = pygame.image.load(
+            os.path.join("textures/turret", filename)
+        ).convert_alpha()
+        return pygame.transform.scale(img, (img.get_width()*10, img.get_height()*10))
+
+    legs       = _load("legs.png")
+    head_calm  = _load("headcalm.png")
+    head_ang1  = _load("headangry1.png")
+    head_ang2  = _load("headangry2.png")
+
+    return legs, head_calm, [head_ang1, head_ang2]
