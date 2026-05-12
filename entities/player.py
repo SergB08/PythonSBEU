@@ -3,6 +3,7 @@ import math
 import settings
 from level.world import WALL
 from entities.turret import PlayerBullet, _angle_to_velocity, DamageNumber
+pygame.mixer.init()
 
 
 class Player:
@@ -119,6 +120,8 @@ class Player:
         if mouse_buttons[0] and self._shoot_timer <= 0:
             self.bullets.append(PlayerBullet(self.world_x, self.world_y, self.angle))
             self._shoot_timer = self.SHOOT_COOLDOWN
+            sound_player_shoot = pygame.mixer.Sound(settings.SOUND_SHOOT)
+            sound_player_shoot.play()
 
         # Bullets
         for b in self.bullets:
