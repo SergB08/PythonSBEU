@@ -1,9 +1,0 @@
-#TO DO
-#
-# RESOLUTION
-# WINDOW TYPE
-#
-# ?LANGUAGE
-#
-# ?MAX FPS
-# ?FPS METER

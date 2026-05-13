@@ -5,7 +5,7 @@ from entities.player import Player
 from entities.turret import Turret
 from assets import (
     load_assets,
-    load_player_sprites,
+    #load_player_sprites,
     load_player_sprites2,
     load_turret_sprites,
 )
@@ -27,7 +27,6 @@ screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
 tick = TickRate(settings.FPS)
 
 icon, floor_tiles, wall_tiles = load_assets()
-animations, idles = load_player_sprites()           # legacy – keep for now
 playerIdle, playerWalk = load_player_sprites2()
 turret_legs, turret_head_calm, turret_head_angry = load_turret_sprites()
 
