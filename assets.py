@@ -3,11 +3,11 @@ import os
 
 import settings
 
-
+#Main game textures and icon
 def load_assets():
 
     icon = pygame.image.load(
-        "images/icon.png"
+        "textures/icon.png"
     ).convert()
     floor_tiles = []
 
@@ -59,6 +59,12 @@ def load_assets():
             wall_tiles.append(img)
 
     return icon, floor_tiles, wall_tiles
+
+def load_menu_textures():
+    idle  = pygame.image.load("textures/ui/btn_idle.png").convert_alpha()
+    hover = pygame.image.load("textures/ui/btn_hover.png").convert_alpha()
+    click = pygame.image.load("textures/ui/btn_click.png").convert_alpha()
+    return idle, hover, click
 
 # Player sprites
 def load_player_sprites2():
