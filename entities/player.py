@@ -28,7 +28,7 @@ class Player:
 
         self.hp           = self.MAX_HP
         self.alive        = True
-        self._shoot_timer = 0.0
+        self._shoot_timer = self.SHOOT_COOLDOWN * 3  # prevent shooting on spawn
         self.bullets      = []
 
         self.damage_numbers = []   # floating hit numbers
@@ -88,25 +88,37 @@ class Player:
         new_y  = self.world_y
         moving = False
 
-        if keys[pygame.K_a]:
-            new_x -= speed;  moving = True
-        if keys[pygame.K_d]:
-            new_x += speed;  moving = True
-        if keys[pygame.K_w]:
-            new_y -= speed;  moving = True
-        if keys[pygame.K_s]:
-            new_y += speed;  moving = True
+        dx, dy = 0, 0
+        moving = False
+        if keys[pygame.K_a]: dx -= 1; moving = True
+        if keys[pygame.K_d]: dx += 1; moving = True
+        if keys[pygame.K_w]: dy -= 1; moving = True
+        if keys[pygame.K_s]: dy += 1; moving = True
 
-        if not self.collides(world, new_x, self.world_y):
-            self.world_x = new_x
-        if not self.collides(world, self.world_x, new_y):
-            self.world_y = new_y
+        length = math.hypot(dx, dy)
+        if length > 0:
+            dx /= length
+            dy /= length
+
+        new_x = self.world_x + dx * speed
+        new_y = self.world_y + dy * speed
 
         if moving:
             self.anim_count += settings.ANIMATION_SPEED * dt * 60
             frames = self.animations["tempWalk"]
             if self.anim_count >= len(frames):
                 self.anim_count = 0
+
+        if not self.collides(world, new_x, self.world_y):
+            self.world_x = new_x
+        if not self.collides(world, self.world_x, new_y):
+            self.world_y = new_y
+
+        # if moving:
+        #     self.anim_count += settings.ANIMATION_SPEED * dt * 60
+        #     frames = self.animations["tempWalk"]
+        #     if self.anim_count >= len(frames):
+        #         self.anim_count = 0
 
         target_angle = self._get_angle_to_mouse()
         if self.rotation_speed == 0:

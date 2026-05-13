@@ -9,8 +9,9 @@ def load_assets():
     icon = pygame.image.load(
         "textures/icon.png"
     ).convert()
+    
+    
     floor_tiles = []
-
     floor_path = "textures/floor"
 
     for file in os.listdir(floor_path):
@@ -33,8 +34,9 @@ def load_assets():
             )
 
             floor_tiles.append(img)
-    wall_tiles = []
+   
 
+    wall_tiles = []
     wall_path = "textures/walls"
 
     for file in os.listdir(wall_path):
@@ -58,13 +60,28 @@ def load_assets():
 
             wall_tiles.append(img)
 
-    return icon, floor_tiles, wall_tiles
+    ladder = pygame.image.load(
+        "textures/drabina.png"
+    ).convert()
+    ladder = pygame.transform.scale(
+        ladder,
+        (
+            settings.TILE_SIZE,
+            settings.TILE_SIZE
+        )
+    )
+
+    return icon, floor_tiles, wall_tiles, ladder
+
+
 
 def load_menu_textures():
     idle  = pygame.image.load("textures/ui/btn_idle.png").convert_alpha()
     hover = pygame.image.load("textures/ui/btn_hover.png").convert_alpha()
     click = pygame.image.load("textures/ui/btn_click.png").convert_alpha()
     return idle, hover, click
+
+
 
 # Player sprites
 def load_player_sprites2():

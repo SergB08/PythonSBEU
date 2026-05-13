@@ -10,14 +10,14 @@ pygame.init()
 screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
 tick = TickRate(settings.FPS)
 
-icon, floor_tiles, wall_tiles = load_assets()
+icon, floor_tiles, wall_tiles, ladder = load_assets()
 pygame.display.set_icon(icon)
 
 btn_idle, btn_hover, btn_click = load_menu_textures()
 menu = Menu(btn_idle, btn_hover, btn_click)
 
 state = "menu"
-world, player = None, None   # not loaded yet
+world, player = None, None#init_game(floor_tiles)
 
 running = True
 while running:
@@ -42,7 +42,8 @@ while running:
             running = False
 
     elif state == "playing":
-        run_game(screen, dt, events, world, player, floor_tiles, wall_tiles)
+        result, world, player = run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder)
+        state = result
 
     pygame.display.update()
 

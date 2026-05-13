@@ -3,6 +3,9 @@ import settings
 
 from level.world import FLOOR, WALL
 
+_minimap_cache = None
+_minimap_world_id = None
+
 
 def draw_world(
     screen,
@@ -75,43 +78,38 @@ def draw_world(
 
 
 def draw_minimap(screen, world, player):
+    global _minimap_cache, _minimap_world_id
 
-    scale = 4
+    scale = 1
+
+    map_w = len(world.tiles[0]) * scale
+    map_h = len(world.tiles)    * scale
 
     offset_x = (
         settings.WIDTH
-        - len(world.tiles[0]) * scale
+        - map_w
         - settings.MINIMAP_PADDING
         - 60
     )
 
     offset_y = (
         settings.HEIGHT
-        - len(world.tiles) * scale
+        - map_h
         - settings.MINIMAP_PADDING
         + 30
     )
 
-    # ===== MAP =====
+    # ===== MAP (cached) =====
 
-    for y, row in enumerate(world.tiles):
+    if _minimap_cache is None or _minimap_world_id != id(world):
+        _minimap_cache    = pygame.Surface((map_w, map_h))
+        _minimap_world_id = id(world)
+        for y, row in enumerate(world.tiles):
+            for x, tile in enumerate(row):
+                color = (200, 200, 200) if tile == FLOOR else (40, 40, 40)
+                _minimap_cache.set_at((x * scale, y * scale), color)
 
-        for x, tile in enumerate(row):
-
-            px = offset_x + x * scale
-            py = offset_y + y * scale
-
-            color = (
-                (200, 200, 200)
-                if tile == FLOOR
-                else (40, 40, 40)
-            )
-
-            pygame.draw.rect(
-                screen,
-                color,
-                (px, py, scale, scale)
-            )
+    screen.blit(_minimap_cache, (offset_x, offset_y))
 
     # ===== PLAYER =====
 
@@ -131,3 +129,15 @@ def draw_minimap(screen, world, player):
         (int(player_px), int(player_py)),
         3
     )
+
+    # ===== LADDER =====
+
+    if world.ladder_x is not None:
+        ladder_px = offset_x + world.ladder_x * scale
+        ladder_py = offset_y + world.ladder_y * scale
+        pygame.draw.circle(
+            screen,
+            (0, 255, 100),
+            (int(ladder_px), int(ladder_py)),
+            3
+        )
