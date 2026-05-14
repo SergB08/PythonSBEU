@@ -5,7 +5,7 @@ from assets import load_menu_textures
 
 
 class DeathScreen:
-    def __init__(self):
+    def __init__(self):  
         tex_idle, tex_hover, tex_click = load_menu_textures()
         self.font_big = pygame.font.SysFont(None, 160, bold=True)
         self.font_btn = pygame.font.SysFont(None, 30,  bold=True)
@@ -32,5 +32,4 @@ class DeathScreen:
             if btn.update(events):
                 return name
             btn.draw(screen)
-
         return None

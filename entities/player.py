@@ -78,12 +78,14 @@ class Player:
                 settings.HEIGHT // 2 - 60,
                 amount,
                 (255, 50, 50)
-            )
-        )
+            )         
+)
         if self.hp <= 0:
+            deathsound = "sounds/deathsound.wav"
+            pygame.mixer.init()
+            pygame.mixer.music.load(deathsound)
+            pygame.mixer.music.play()
             self.alive = False
-            pygame.mixer.play('deathsound.mp3')   # stop all sounds on death for dramatic effect
-
     # ── update ───────────────────────────────────────────────────────────── #
 
     def update(self, keys, dt, world, mouse_buttons):
