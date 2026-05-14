@@ -20,5 +20,5 @@ MINIMAP_PADDING = 200
 #SOUND_SHOOT = "sounds/shoot.wav"
 
 # Settings menu persistent state
-VOLUME      = 1.0
+VOLUME      = 0.5
 WINDOW_MODE = 0   # 0 = Windowed, 1 = Fullscreen, 2 = Borderless
