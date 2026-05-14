@@ -1,8 +1,10 @@
 import random
-
 import pygame
 import math
+
 import settings
+import assets
+
 pygame.mixer.init()
 
 
@@ -181,7 +183,8 @@ class Turret:
         self.damage_numbers = []
 
         if Turret.SHOOT_SOUND is None:
-            Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+            #Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+            Turret.SHOOT_SOUND = pygame.mixer.Sound(assets.TurretShot)
 
     # ── helpers ──────────────────────────────────────────────────────────── #
 

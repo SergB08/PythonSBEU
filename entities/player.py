@@ -1,6 +1,9 @@
 import pygame
 import math
+
 import settings
+import assets
+
 from level.world import WALL
 from entities.turret import PlayerBullet, _angle_to_velocity, DamageNumber
 pygame.mixer.init()
@@ -35,7 +38,8 @@ class Player:
         self.damage_numbers = []   # floating hit numbers
 
         if Player.SHOOT_SOUND is None:
-            Player.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+            #Player.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+            Player.SHOOT_SOUND = pygame.mixer.Sound(assets.PlayerPistolShot)
 
     # ── angle to mouse ───────────────────────────────────────────────────── #
 
