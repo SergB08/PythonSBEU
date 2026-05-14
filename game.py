@@ -8,6 +8,10 @@ from level.generation import generate_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
 
+from death_screen import DeathScreen
+
+_death_screen = None   # lazy singleton
+
 def init_game(floor_tiles):
     animations, idles = load_player_sprites2()
     world = generate_world(len(floor_tiles))#generate_world(settings.WORLD_WIDTH, settings.WORLD_HEIGHT, len(floor_tiles))
@@ -94,9 +98,14 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
     player.draw_hud(screen)
     
     if not player.alive:
-        font = pygame.font.SysFont(None, 120, bold=True)
-        text = font.render("YOU DIED", True, (200, 0, 0))
-        screen.blit(text, (settings.WIDTH // 2 - text.get_width() // 2,
-                            settings.HEIGHT // 2 - text.get_height() // 2))
+        global _death_screen
+        if _death_screen is None:
+            _death_screen = DeathScreen()
+        result = _death_screen.run(screen, events)
+        if result == "restart":
+            new_world, new_player = init_game(floor_tiles)
+            return "playing", new_world, new_player
+        if result == "menu":
+            return "menu", None, None
 
     return "playing", world, player

@@ -5,6 +5,7 @@ from game import init_game
 from tickrate import TickRate
 import settings
 from game import init_game, run_game
+from settings_menu import SettingsMenu
 
 pygame.init()
 screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
@@ -15,6 +16,8 @@ pygame.display.set_icon(icon)
 
 btn_idle, btn_hover, btn_click = load_menu_textures()
 menu = Menu(btn_idle, btn_hover, btn_click)
+
+settings_menu = SettingsMenu()
 
 state = "menu"
 world, player = None, None#init_game(floor_tiles)
@@ -33,13 +36,23 @@ while running:
     if state == "menu":
         result = menu.run(screen, events)
         if result == "play":
-            if world is None:          # generate only once on first Play
+            if world is None:
                 world, player = init_game(floor_tiles)
             state = "playing"
         elif result == "settings":
-            pass
+            state = "settings"
         elif result == "exit":
             running = False
+
+    elif state == "settings":
+        result = settings_menu.run(screen, events)
+        if result == "back":
+            state = "menu"
+            tick = TickRate(settings.FPS)
+            screen = pygame.display.get_surface()  # get the new surface after mode change
+            # Rebuild menus with new dimensions
+            menu = Menu(btn_idle, btn_hover, btn_click)
+            settings_menu = SettingsMenu()
 
     elif state == "playing":
         result, world, player = run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder)
