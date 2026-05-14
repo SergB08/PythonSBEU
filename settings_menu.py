@@ -72,7 +72,7 @@ class OptionRow:
 
 class SettingsMenu:
     WINDOW_OPTIONS = ["Windowed", "Fullscreen", "Borderless"]
-    FPS_OPTIONS    = [30, 60, 144]
+    FPS_OPTIONS    = [ 5, 30, 60, 144 ]
     RES_OPTIONS    = ["1280x720", "1920x1080", "2560x1440"]
 
     def __init__(self):

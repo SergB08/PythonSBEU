@@ -80,8 +80,8 @@ def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
 class Bullet:
     """Turret bullet — brass look."""
 
-    SPEED    = 3500
-    DAMAGE   = 5
+    SPEED    = 7500
+    DAMAGE   = 50
     LIFETIME = 3
     LENGTH   = 25
     WIDTH    = 6
@@ -147,11 +147,11 @@ class Turret:
     randomHPTurret = random.randrange(70, 120)
 
     MAX_HP         = randomHPTurret
-    DETECT_RANGE   = 650
-    FIRE_RANGE     = 650
-    AIM_TIME       = 0.5
-    FIRE_COOLDOWN  = 0.05
-    HEAD_ROT_SPEED = 300
+    DETECT_RANGE   = 1000
+    FIRE_RANGE     = 1000
+    AIM_TIME       = 0
+    FIRE_COOLDOWN  = 0.0000001
+    HEAD_ROT_SPEED = 30000
 
     ANGRY_ANIM_SPEED = 0.9
     SHOOT_SOUND      = None
