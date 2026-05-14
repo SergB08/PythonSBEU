@@ -7,6 +7,9 @@ from assets import load_player_sprites2
 from level.generation import generate_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
+from body_health import BodyHealth
+from inventory import Inventory, Hotbar
+from weapons import Pistol, Fist
 
 from death_screen import DeathScreen
 
@@ -18,6 +21,16 @@ def init_game(floor_tiles):
     player = Player(animations, idles)
     player.world_x = world.spawn_x * settings.TILE_SIZE
     player.world_y = world.spawn_y * settings.TILE_SIZE
+    
+    # Initialize body health system
+    player.body_health = BodyHealth()
+    player.hp = player.body_health.hp
+    
+    # Initialize inventory
+    player.inventory = Inventory()
+    player.hotbar = Hotbar()
+    player.pistol = Pistol()
+    player.fist = Fist()
 
     legs, head_calm, head_angry = load_turret_sprites()
     world.turrets = []
@@ -34,6 +47,19 @@ def init_game(floor_tiles):
 def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_img):
     keys = pygame.key.get_pressed()
     mouse_buttons = pygame.mouse.get_pressed()
+
+    # Handle inventory and hotbar events
+    player.inventory.handle_events(events)
+    player.hotbar.handle_events(events)
+    
+    # Update weapons
+    active_item = player.hotbar.active_item()
+    if active_item and active_item.item_type == "gun_pistol":
+        player.pistol.update(dt, mouse_buttons, keys, player.angle, 
+                            player.world_x, player.world_y, world, player.inventory)
+    elif active_item and active_item.item_type == "melee":
+        player.fist.update(dt, mouse_buttons, player.world_x, player.world_y, 
+                          player.angle, world.turrets)
 
     # Check ladder proximity
     near_ladder = False
@@ -68,6 +94,8 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
     player.draw(screen, keys)
     player.draw_bullets(screen, camera_x, camera_y)
     
+    # Draw weapon bullets
+    player.pistol.draw_bullets(screen, camera_x, camera_y)
     
     if near_ladder_blocked:
         font = pygame.font.SysFont(None, 40, bold=True)
@@ -87,7 +115,8 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                     player.take_damage(bullet.DAMAGE)
                     bullet.alive = False
 
-        for bullet in player.bullets:
+        # Check player weapon bullets against turrets
+        for bullet in player.bullets + player.pistol.bullets:
             if bullet.alive:
                 dx = bullet.x - turret.world_x
                 dy = bullet.y - turret.world_y
@@ -96,6 +125,9 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                     bullet.alive = False
     
     player.draw_hud(screen)
+    player.inventory.draw(screen)
+    player.hotbar.draw(screen)
+    player.pistol.draw_hud(screen)
     
     if not player.alive:
         global _death_screen

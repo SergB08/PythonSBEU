@@ -20,3 +20,5 @@ class World:
 
         # List of (tile_x, tile_y) where turrets should be placed
         self.turret_spawns = []
+        self.turrets = []
+        self.loot_boxes = []

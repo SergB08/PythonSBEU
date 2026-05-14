@@ -36,6 +36,8 @@ class Player:
         self.bullets      = []
 
         self.damage_numbers = []   # floating hit numbers
+        self.body_health = None  # Will be initialized after player creation
+        self.inventory = None    # Will be initialized after player creation
 
         if Player.SHOOT_SOUND_PISTOL is None:
             Player.SHOOT_SOUND_PISTOL = pygame.mixer.Sound(assets.PlayerPistolShot)
@@ -67,25 +69,44 @@ class Player:
 
     # ── combat ───────────────────────────────────────────────────────────── #
 
-    def take_damage(self, amount):
+    def take_damage(self, amount, force_part=None):
         """Reduce HP and spawn a floating damage number on screen."""
-        self.hp -= amount
-        if self.hp < 0:
-            self.hp = 0
-        self.damage_numbers.append(
-            DamageNumber(
-                settings.WIDTH  // 2,
-                settings.HEIGHT // 2 - 60,
-                amount,
-                (255, 50, 50)
-            )         
-)
-        if self.hp <= 0:
-            deathsound = "sounds/deathsound.wav"
-            pygame.mixer.init()
-            pygame.mixer.music.load(deathsound)
-            pygame.mixer.music.play()
-            self.alive = False
+        if self.body_health:
+            part_name, actual = self.body_health.take_damage(amount, force_part)
+            self.hp = self.body_health.hp
+            self.damage_numbers.append(
+                DamageNumber(
+                    settings.WIDTH  // 2,
+                    settings.HEIGHT // 2 - 60,
+                    actual,
+                    (255, 50, 50)
+                )         
+            )
+            if not self.body_health.alive:
+                deathsound = "sounds/deathsound.wav"
+                pygame.mixer.init()
+                pygame.mixer.music.load(deathsound)
+                pygame.mixer.music.play()
+                self.alive = False
+        else:
+            self.hp -= amount
+            if self.hp < 0:
+                self.hp = 0
+            self.damage_numbers.append(
+                DamageNumber(
+                    settings.WIDTH  // 2,
+                    settings.HEIGHT // 2 - 60,
+                    amount,
+                    (255, 50, 50)
+                )         
+            )
+            if self.hp <= 0:
+                deathsound = "sounds/deathsound.wav"
+                pygame.mixer.init()
+                pygame.mixer.music.load(deathsound)
+                pygame.mixer.music.play()
+                self.alive = False
+                
     # ── update ───────────────────────────────────────────────────────────── #
 
     def update(self, keys, dt, world, mouse_buttons):
@@ -162,36 +183,39 @@ class Player:
             b.draw(screen, camera_x, camera_y)
 
     def draw_hud(self, screen):
-        PAD   = 20
-        bar_w = 260
-        bar_h = 28
-        bx    = PAD
-        by    = PAD
-        ratio = max(0.0, self.hp / self.MAX_HP)
+        if self.body_health:
+            self.body_health.draw_hud(screen)
+        else:
+            PAD   = 20
+            bar_w = 260
+            bar_h = 28
+            bx    = PAD
+            by    = PAD
+            ratio = max(0.0, self.hp / self.MAX_HP)
 
-        panel_rect = (bx - 8, by - 8, bar_w + 16, bar_h + 16)
-        panel_surf = pygame.Surface((panel_rect[2], panel_rect[3]), pygame.SRCALPHA)
-        panel_surf.fill((0, 0, 0, 140))
-        screen.blit(panel_surf, (panel_rect[0], panel_rect[1]))
+            panel_rect = (bx - 8, by - 8, bar_w + 16, bar_h + 16)
+            panel_surf = pygame.Surface((panel_rect[2], panel_rect[3]), pygame.SRCALPHA)
+            panel_surf.fill((0, 0, 0, 140))
+            screen.blit(panel_surf, (panel_rect[0], panel_rect[1]))
 
-        pygame.draw.rect(screen, (70, 0, 0), (bx, by, bar_w, bar_h))
+            pygame.draw.rect(screen, (70, 0, 0), (bx, by, bar_w, bar_h))
 
-        fill_color = (int(255 * (1 - ratio)), int(210 * ratio), 0)
-        fill_w     = int(bar_w * ratio)
-        if fill_w > 0:
-            pygame.draw.rect(screen, fill_color, (bx, by, fill_w, bar_h))
+            fill_color = (int(255 * (1 - ratio)), int(210 * ratio), 0)
+            fill_w     = int(bar_w * ratio)
+            if fill_w > 0:
+                pygame.draw.rect(screen, fill_color, (bx, by, fill_w, bar_h))
 
-        pygame.draw.rect(screen, (210, 210, 210), (bx, by, bar_w, bar_h), 2)
+            pygame.draw.rect(screen, (210, 210, 210), (bx, by, bar_w, bar_h), 2)
 
-        label_font = pygame.font.SysFont(None, 22, bold=True)
-        label      = label_font.render("HP", True, (200, 200, 200))
-        screen.blit(label, (bx - label.get_width() - 6,
-                             by + bar_h // 2 - label.get_height() // 2))
+            label_font = pygame.font.SysFont(None, 22, bold=True)
+            label      = label_font.render("HP", True, (200, 200, 200))
+            screen.blit(label, (bx - label.get_width() - 6,
+                                 by + bar_h // 2 - label.get_height() // 2))
 
-        num_font = pygame.font.SysFont(None, 24, bold=True)
-        num_txt  = num_font.render(f"{self.hp}  /  {self.MAX_HP}", True, (255, 255, 255))
-        screen.blit(num_txt, (bx + bar_w // 2 - num_txt.get_width()  // 2,
-                               by + bar_h // 2 - num_txt.get_height() // 2))
+            num_font = pygame.font.SysFont(None, 24, bold=True)
+            num_txt  = num_font.render(f"{self.hp}  /  {self.MAX_HP}", True, (255, 255, 255))
+            screen.blit(num_txt, (bx + bar_w // 2 - num_txt.get_width()  // 2,
+                                   by + bar_h // 2 - num_txt.get_height() // 2))
 
         for dn in self.damage_numbers:
             dn.draw(screen)
