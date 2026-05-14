@@ -81,7 +81,7 @@ class Bullet:
     """Turret bullet — brass look."""
 
     SPEED    = 7500
-    DAMAGE   = 50
+    DAMAGE   = 10
     LIFETIME = 3
     LENGTH   = 25
     WIDTH    = 6
@@ -147,13 +147,13 @@ class Turret:
     randomHPTurret = random.randrange(70, 120)
 
     MAX_HP         = randomHPTurret
-    DETECT_RANGE   = 1000
-    FIRE_RANGE     = 1000
-    AIM_TIME       = 0
-    FIRE_COOLDOWN  = 0.0000001
-    HEAD_ROT_SPEED = 30000
+    DETECT_RANGE   = 800
+    FIRE_RANGE     = 750
+    AIM_TIME       = 0.5
+    FIRE_COOLDOWN  = 0.036
+    HEAD_ROT_SPEED = 300
 
-    ANGRY_ANIM_SPEED = 0.9
+    ANGRY_ANIM_SPEED = 0.75
     SHOOT_SOUND      = None
 
     HEAD_SPRITE_OFFSET = -90
