@@ -1,12 +1,12 @@
 WIDTH = 1920
 HEIGHT = 1080
+FPS = 60
 
-FPS = 60#30
 PLAYER_SPEED = 15   
 ANIMATION_SPEED = 0.08
 
-TILE_SIZE = 160#40#160
-ROOM_SIZE = 32#12
+TILE_SIZE = 160
+ROOM_SIZE = 32
 CORRIDOR_WIDTH = 1
 
 GRID_WIDTH = 8
@@ -18,3 +18,7 @@ MINIMAP_SCALE = 2
 MINIMAP_PADDING = 200
 
 SOUND_SHOOT = "sounds/shoot.wav"
+
+# Settings menu persistent state
+VOLUME      = 1.0
+WINDOW_MODE = 0   # 0 = Windowed, 1 = Fullscreen, 2 = Borderless

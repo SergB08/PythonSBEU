@@ -13,7 +13,7 @@ pygame.mixer.init()
 class DamageNumber:
     """A small number that floats upward and fades out after a hit."""
 
-    FONT = None   # initialised on first use (pygame must be ready)
+    FONT = None
 
     def __init__(self, screen_x, screen_y, amount, color=(255, 60, 60)):
         self.x      = float(screen_x)
@@ -22,11 +22,11 @@ class DamageNumber:
         self.color  = color
         self.alpha  = 255
         self.alive  = True
-        self._vy    = -80   # px/s upward drift
+        self._vy    = -80
 
     def update(self, dt):
         self.y     += self._vy * dt
-        self.alpha -= 320 * dt          # fade ~0.8 s
+        self.alpha -= 320 * dt
         if self.alpha <= 0:
             self.alive = False
 
@@ -40,15 +40,6 @@ class DamageNumber:
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Bullet direction helper
-#
-#  Convention: angle 0 = sprite/bullet points UP (pygame CCW)
-#    vx = -sin(θ) * speed
-#    vy = -cos(θ) * speed
-#
-#  Verification:
-#    θ=0   → vx=0,      vy=-speed   flies UP      ✓
-#    θ=-90 → vx=+speed, vy=0        flies RIGHT   ✓  (CW = right)
-#    θ=90  → vx=-speed, vy=0        flies LEFT    ✓  (CCW = left)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _angle_to_velocity(angle_deg, speed):
@@ -57,7 +48,7 @@ def _angle_to_velocity(angle_deg, speed):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Bullet drawing helper – elongated shape aligned with travel direction
+#  Bullet drawing helper
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
@@ -65,11 +56,10 @@ def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
     if spd < 1:
         pygame.draw.circle(surface, body_col, (sx, sy), width)
         return
-    nx, ny = vx / spd, vy / spd    # unit along travel
-    px, py = -ny, nx                 # perpendicular
+    nx, ny = vx / spd, vy / spd
+    px, py = -ny, nx
 
     hw = width / 2
-    # tail (blunt end) and tip (pointed end)
     tail = (sx - nx * length * 0.35, sy - ny * length * 0.35)
     tip  = (sx + nx * length * 0.65, sy + ny * length * 0.65)
 
@@ -151,9 +141,6 @@ class Turret:
     Stationary enemy turret.
     Layers: legs (static) + head (rotates toward player).
     States: idle → alert (calm head) → firing (angry head + shooting)
-
-    Tune firerate:
-        FIRE_COOLDOWN = 0.6   # seconds between shots (lower = faster)
     """
     randomHPTurret = random.randrange(70, 120)
 
@@ -161,22 +148,12 @@ class Turret:
     DETECT_RANGE   = 650
     FIRE_RANGE     = 650
     AIM_TIME       = 0.5
-    FIRE_COOLDOWN  = 0.05    # ← tune this
+    FIRE_COOLDOWN  = 0.05
     HEAD_ROT_SPEED = 300
 
     ANGRY_ANIM_SPEED = 0.9
-    SHOOT_SOUND = None
+    SHOOT_SOUND      = None
 
-    # ── Sprite orientation correction ──────────────────────────────────────
-    # pygame.transform.rotate(img, angle) rotates CCW.
-    # At angle=0 the head should face UP on screen.
-    # If your headcalm.png/headangry PNGs face a different direction
-    # by default, adjust HEAD_SPRITE_OFFSET:
-    #   0   → image already faces UP
-    #   90  → image faces LEFT  (rotate 90° CW to fix → offset = -90)
-    #   -90 → image faces RIGHT (rotate 90° CCW to fix → offset = 90) ← try this
-    #   180 → image faces DOWN
-    # We'll use -90 here because your images appear to face right by default.
     HEAD_SPRITE_OFFSET = -90
 
     def __init__(self, world_x, world_y, legs_img, head_calm, head_angry):
@@ -186,12 +163,10 @@ class Turret:
         self.hp    = self.MAX_HP
         self.alive = True
 
-        self.legs_img = legs_img
-        legs_size     = legs_img.get_size()
+        self.legs_img  = legs_img
+        legs_size      = legs_img.get_size()
         angr_head_size = head_angry[0].get_size()
 
-        # Force every head frame to exactly legs_img size so rotation
-        # never changes the apparent scale between calm and angry.
         self.head_calm  = pygame.transform.smoothscale(head_calm, legs_size)
         self.head_angry = [pygame.transform.smoothscale(f, angr_head_size)
                            for f in head_angry]
@@ -202,15 +177,17 @@ class Turret:
         self._fire_timer  = 0.0
         self._angry_frame = 0.0
 
-        self.bullets       = []
-        self.damage_numbers = []   # floating damage popups
+        self.bullets        = []
+        self.damage_numbers = []
+
+        if Turret.SHOOT_SOUND is None:
+            Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
 
     # ── helpers ──────────────────────────────────────────────────────────── #
 
     def _angle_to_world_pos(self, tx, ty):
-        """Return pygame-CCW angle so head faces world point (tx, ty)."""
         dx =  tx - self.world_x
-        dy = -(ty - self.world_y)       # flip y: screen down = world neg
+        dy = -(ty - self.world_y)
         return math.degrees(math.atan2(dy, dx)) - 90
 
     def _dist(self, px, py):
@@ -272,18 +249,14 @@ class Turret:
 
     def _shoot(self):
         self.bullets.append(Bullet(self.world_x, self.world_y, self.head_angle))
-        if Turret.SHOOT_SOUND is None:
-            Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
+        Turret.SHOOT_SOUND.set_volume(settings.VOLUME)
         Turret.SHOOT_SOUND.play()
-        
         self._fire_timer = self.FIRE_COOLDOWN
-            
+
     def take_damage(self, amount, camera_x, camera_y):
-        """Call with camera offsets so the damage number spawns at screen pos."""
         self.hp -= amount
         if self.hp < 0:
             self.hp = 0
-        # Spawn floating number above the turret's screen position
         sx = int(self.world_x - camera_x)
         sy = int(self.world_y - camera_y) - self.legs_img.get_height() // 2 - 20
         self.damage_numbers.append(DamageNumber(sx, sy, amount, (255, 80, 30)))
@@ -304,11 +277,9 @@ class Turret:
                 sy < -margin or sy > settings.HEIGHT + margin):
             return
 
-        # Legs — static
         legs_rect = self.legs_img.get_rect(center=(sx, sy))
         screen.blit(self.legs_img, legs_rect.topleft)
 
-        # Head — rotated
         if self.state == "firing":
             fi  = int(self._angry_frame) % len(self.head_angry)
             src = self.head_angry[fi]
@@ -324,7 +295,6 @@ class Turret:
         for b in self.bullets:
             b.draw(screen, camera_x, camera_y)
 
-        # Damage numbers are in screen-space (spawned with camera offset)
         for dn in self.damage_numbers:
             dn.draw(screen)
 
@@ -335,18 +305,13 @@ class Turret:
         by    = sy - self.legs_img.get_height() // 2 - 18
         ratio = max(0.0, self.hp / self.MAX_HP)
 
-        # Shadow
         pygame.draw.rect(screen, (10, 10, 10), (bx - 1, by - 1, bar_w + 2, bar_h + 2))
-        # Empty
         pygame.draw.rect(screen, (60, 0, 0), (bx, by, bar_w, bar_h))
-        # Fill
         fill = (int(255 * (1 - ratio)), int(220 * ratio), 0)
         if ratio > 0:
             pygame.draw.rect(screen, fill, (bx, by, int(bar_w * ratio), bar_h))
-        # Border
         pygame.draw.rect(screen, (180, 180, 180), (bx, by, bar_w, bar_h), 1)
 
-        # HP number centred in bar
         if DamageNumber.FONT is None:
             DamageNumber.FONT = pygame.font.SysFont(None, 30, bold=True)
         font = pygame.font.SysFont(None, 18)

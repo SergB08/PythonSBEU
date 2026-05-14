@@ -40,6 +40,8 @@ while running:
                 world, player = init_game(floor_tiles)
             state = "playing"
         elif result == "settings":
+            # Create a fresh settings menu with current resolution
+            settings_menu = SettingsMenu()
             state = "settings"
         elif result == "exit":
             running = False
@@ -52,7 +54,6 @@ while running:
             screen = pygame.display.get_surface()  # get the new surface after mode change
             # Rebuild menus with new dimensions
             menu = Menu(btn_idle, btn_hover, btn_click)
-            settings_menu = SettingsMenu()
 
     elif state == "playing":
         result, world, player = run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder)
