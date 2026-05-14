@@ -13,7 +13,7 @@ class Player:
 
     MAX_HP         = settings.PLAYER_HP
     SHOOT_COOLDOWN_PISTOL = settings.PLAYER_SHOOT_COOLDOWN_PISTOL   # seconds between shots
-    SHOOT_SOUND    = None   # loaded once
+    SHOOT_SOUND_PISTOL    = None   # loaded once
 
     def __init__(self, idles, animations, rotation_speed=500):
 
@@ -37,9 +37,8 @@ class Player:
 
         self.damage_numbers = []   # floating hit numbers
 
-        if Player.SHOOT_SOUND is None:
-            #Player.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
-            Player.SHOOT_SOUND = pygame.mixer.Sound(assets.PlayerPistolShot)
+        if Player.SHOOT_SOUND_PISTOL is None:
+            Player.SHOOT_SOUND_PISTOL = pygame.mixer.Sound(assets.PlayerPistolShot)
 
     # ── angle to mouse ───────────────────────────────────────────────────── #
 
@@ -132,8 +131,8 @@ class Player:
         if mouse_buttons[0] and self._shoot_timer_pistol <= 0:
             self.bullets.append(PlayerBullet(self.world_x, self.world_y, self.angle))
             self._shoot_timer_pistol = self.SHOOT_COOLDOWN_PISTOL
-            Player.SHOOT_SOUND.set_volume(settings.VOLUME)
-            Player.SHOOT_SOUND.play()
+            Player.SHOOT_SOUND_PISTOL.set_volume(settings.VOLUME)
+            Player.SHOOT_SOUND_PISTOL.play()
 
         # Bullets
         for b in self.bullets:
