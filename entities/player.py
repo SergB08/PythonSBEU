@@ -82,6 +82,7 @@ class Player:
         )
         if self.hp <= 0:
             self.alive = False
+            pygame.mixer.play('deathsound.mp3')   # stop all sounds on death for dramatic effect
 
     # ── update ───────────────────────────────────────────────────────────── #
 
