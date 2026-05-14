@@ -1,3 +1,5 @@
+import random
+
 import pygame
 import math
 import settings
@@ -86,11 +88,11 @@ def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
 class Bullet:
     """Turret bullet — brass look."""
 
-    SPEED    = 2000
-    DAMAGE   = 10
-    LIFETIME = 1.8
-    LENGTH   = 14
-    WIDTH    = 4
+    SPEED    = 3500
+    DAMAGE   = 5
+    LIFETIME = 3
+    LENGTH   = 25
+    WIDTH    = 6
 
     def __init__(self, x, y, angle_deg):
         self.x  = float(x)
@@ -129,7 +131,7 @@ class PlayerBullet(Bullet):
     """Player bullet — steel look."""
 
     SPEED    = 2000
-    DAMAGE   = 25
+    DAMAGE   = 5
     LIFETIME = 1.5
     LENGTH   = 16
     WIDTH    = 4
@@ -153,15 +155,16 @@ class Turret:
     Tune firerate:
         FIRE_COOLDOWN = 0.6   # seconds between shots (lower = faster)
     """
+    randomHPTurret = random.randrange(70, 120)
 
-    MAX_HP         = 80
-    DETECT_RANGE   = 500
-    FIRE_RANGE     = 550
-    AIM_TIME       = 1.0
-    FIRE_COOLDOWN  = 0.1    # ← tune this
-    HEAD_ROT_SPEED = 150
+    MAX_HP         = randomHPTurret
+    DETECT_RANGE   = 650
+    FIRE_RANGE     = 650
+    AIM_TIME       = 0.5
+    FIRE_COOLDOWN  = 0.05    # ← tune this
+    HEAD_ROT_SPEED = 300
 
-    ANGRY_ANIM_SPEED = 0.20
+    ANGRY_ANIM_SPEED = 0.9
     SHOOT_SOUND = None
 
     # ── Sprite orientation correction ──────────────────────────────────────
@@ -258,12 +261,12 @@ class Turret:
 
         elif self.state == "firing":
             aligned = self._rotate_toward(target, dt)
-            self._angry_frame += self.ANGRY_ANIM_SPEED * dt * 60
             if dist > self.DETECT_RANGE * 1.2:
                 self.state = "idle"
                 return
             self._fire_timer -= dt
             if self._fire_timer <= 0 and dist <= self.FIRE_RANGE and aligned:
+                self._angry_frame += self.ANGRY_ANIM_SPEED * dt * 60
                 self._shoot()
                 self._fire_timer = self.FIRE_COOLDOWN
 
