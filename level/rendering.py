@@ -80,7 +80,7 @@ def draw_world(
 def draw_minimap(screen, world, player):
     global _minimap_cache, _minimap_world_id
 
-    scale = 1
+    scale = settings.MINIMAP_SCALE
 
     map_w = len(world.tiles[0]) * scale
     map_h = len(world.tiles)    * scale
