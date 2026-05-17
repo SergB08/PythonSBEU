@@ -11,6 +11,11 @@ from ui.inventory import InventoryUI, ChestUI
 
 pygame.mixer.init()
 
+# Player body part rotation speeds in degrees per second
+BODY_ROT_SPEED = 1000
+LEG_ROT_SPEED  = 500
+HEAD_ROT_SPEED = BODY_ROT_SPEED#1000
+
 
 # ── Crosshair ────────────────────────────────────────────────────────────────
 def draw_crosshair(screen):
@@ -31,31 +36,35 @@ class Player:
     RELOAD_TIME    = 1.5
     SHOOT_SOUND    = None
 
-    def __init__(self, idles, animations, rotation_speed=500):
+    def _prep(self, img, size=192):
+        img = pygame.transform.scale(img, (size, size))
+        return img
+
+    def __init__(self, playerHead, playerBody, playerBodyPistol,
+                 legsIdle, legsWalkFrames, rotation_speed=500):
+
         self.world_x = 0
         self.world_y = 0
-        self.width   = 106
-        self.height  = 62
+        self.width   = 128
+        self.height  = 128
 
-        self.idle       = idles
-        self.animations = animations
-        self.anim_count = 0
-        self.angle      = 0
+        self.playerHead       = self._prep(playerHead)
+        self.playerBody       = self._prep(playerBody)
+        self.playerBodyPistol = self._prep(playerBodyPistol)
+        self.legsIdle         = self._prep(legsIdle)
+        self.legsWalkFrames   = [self._prep(frame) for frame in legsWalkFrames]
+
+        self.anim_count    = 0
+        self.angle         = 0.0
+        self.leg_angle     = 0.0
         self.rotation_speed = rotation_speed
-
-        # ── New health system ──────────────────────────────────────────
-        self.body = BodyHealth()
-
-        # Legacy shim so game.py `player.alive` still works
-        @property
-        def alive(self):
-            return self.body.alive
-
-        # ── Inventory + chest ─────────────────────────────────────────
+        self._target_angle = 0.0 #body will smoothly rotate towards this angle
+        self.head_angle = 0.0 #head will smoothly rotate towards this angle
+        
+        self.body      = BodyHealth()
         self.inventory = InventoryUI()
         self.chest_ui  = ChestUI()
 
-        # Weapon / ammo
         self.weapon        = "pistol"
         self.ammo          = self.MAG_SIZE
         self._reloading    = False
@@ -63,24 +72,23 @@ class Player:
         self._shoot_timer  = self.SHOOT_COOLDOWN * 3
 
         self.bullets        = []
-        self.damage_numbers = []   # kept for turret hit numbers on screen
+        self.damage_numbers = []
 
         if Player.SHOOT_SOUND is None:
             Player.SHOOT_SOUND = pygame.mixer.Sound(assets.PlayerPistolShot)
 
-    # ── alive shi  m ───────────────────────────────────────────────────────── #
+    # ── alive shim ───────────────────────────────────────────────────────── #
     @property
     def alive(self):
         return self.body.alive
 
-    # ── legacy HP shim (game.py reads player.hp) ─────────────────────────── #
+    # ── legacy HP shim ────────────────────────────────────────────────────── #
     @property
     def hp(self):
         return int(self.body.total_hp)
 
     @hp.setter
     def hp(self, value):
-        # scale all parts proportionally when set externally (level transition)
         ratio = max(0.0, value / self.body.max_total_hp)
         for part in self.body.parts.values():
             part.hp = ratio * 100
@@ -91,7 +99,7 @@ class Player:
         mx, my = pygame.mouse.get_pos()
         dx =  mx - settings.WIDTH  // 2
         dy =  my - settings.HEIGHT // 2
-        return -(math.degrees(math.atan2(dy, dx)) + 90)
+        return -(math.degrees(math.atan2(dy, dx)) + 0)
 
     def collides(self, world, x, y):
         ts = settings.TILE_SIZE
@@ -111,7 +119,6 @@ class Player:
 
     def take_damage(self, amount, part="Torso"):
         self.body.take_damage(amount, part)
-        # floating damage number on screen
         self.damage_numbers.append(
             DamageNumber(settings.WIDTH // 2, settings.HEIGHT // 2 - 60,
                          amount, (255, 50, 50))
@@ -133,10 +140,8 @@ class Player:
 
         self.body.update(dt)
 
-        # ── key events ────────────────────────────────────────────────────
         if events:
             for e in events:
-                # Inventory / health panel toggle
                 self.inventory.handle_event(e)
                 self.chest_ui.handle_event(e)
 
@@ -152,7 +157,6 @@ class Player:
                     elif e.key == pygame.K_r:
                         self.start_reload()
 
-        # ── movement ──────────────────────────────────────────────────────
         speed  = settings.PLAYER_SPEED * dt * 60
         dx, dy = 0, 0
         moving = False
@@ -168,24 +172,18 @@ class Player:
         new_x = self.world_x + dx * speed
         new_y = self.world_y + dy * speed
 
-        if moving:
-            self.anim_count += settings.ANIMATION_SPEED * dt * 60
-            if self.anim_count >= len(self.animations["tempWalk"]):
-                self.anim_count = 0
-
         if not self.collides(world, new_x, self.world_y): self.world_x = new_x
         if not self.collides(world, self.world_x, new_y): self.world_y = new_y
 
-        self.angle = self._get_angle_to_mouse()
-
-        # ── reload ────────────────────────────────────────────────────────
+        #self.angle = self._get_angle_to_mouse()
+        self._target_angle = self._get_angle_to_mouse()
+    
         if self._reloading:
             self._reload_timer -= dt
             if self._reload_timer <= 0:
                 self.ammo       = self.MAG_SIZE
                 self._reloading = False
 
-        # ── shoot ─────────────────────────────────────────────────────────
         self._shoot_timer -= dt
         if (self.weapon == "pistol"
                 and mouse_buttons[0]
@@ -198,7 +196,11 @@ class Player:
                 dx2 =  mx - settings.WIDTH  // 2
                 dy2 =  my - settings.HEIGHT // 2
                 shoot_angle = math.degrees(math.atan2(-dy2, dx2)) - 90
-                self.bullets.append(PlayerBullet(self.world_x, self.world_y, shoot_angle))
+                rad = math.radians(shoot_angle)
+                offset_x = -math.sin(rad) * 70   # forward offset
+                offset_y = -math.cos(rad) * 70
+                self.bullets.append(PlayerBullet(self.world_x + offset_x, self.world_y + offset_y, shoot_angle))
+                #self.bullets.append(PlayerBullet(self.world_x, self.world_y, shoot_angle))
                 self.ammo -= 1
                 self._shoot_timer = self.SHOOT_COOLDOWN
                 Player.SHOOT_SOUND.set_volume(settings.VOLUME)
@@ -206,7 +208,6 @@ class Player:
             else:
                 self.start_reload()
 
-        # ── bullets ───────────────────────────────────────────────────────
         for b in self.bullets: b.update(dt, world)
         self.bullets = [b for b in self.bullets if b.alive]
 
@@ -214,18 +215,63 @@ class Player:
         self.damage_numbers = [d for d in self.damage_numbers if d.alive]
 
     # ── draw ─────────────────────────────────────────────────────────────── #
+    def draw(self, screen, keys, dt=0.016):
+        #print(dt)
 
-    def draw(self, screen, keys):
         moving = any(keys[k] for k in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s])
-        img = (self.animations["tempWalk"][int(self.anim_count)]
-               if moving else self.idle["tempIdleAnim"])
-        rotated = pygame.transform.rotate(img, self.angle)
-        rect    = rotated.get_rect(center=(settings.WIDTH // 2, settings.HEIGHT // 2))
-        screen.blit(rotated, rect.topleft)
-        self._draw_body_hp(screen, rect)
+
+        cx = settings.WIDTH  // 2
+        cy = settings.HEIGHT // 2
+
+        # Legs
+        if moving:
+            self.anim_count += settings.ANIMATION_SPEED * dt * 60
+            if self.anim_count >= len(self.legsWalkFrames):
+                self.anim_count = 0
+            legs_img = self.legsWalkFrames[int(self.anim_count)]
+        else:
+            self.anim_count = 0
+            legs_img = self.legsIdle
+
+        diff = (self.angle - self.leg_angle + 180) % 360 - 180
+        step = LEG_ROT_SPEED * dt
+        if abs(diff) <= step:
+            self.leg_angle = self.angle
+        else:
+            self.leg_angle += math.copysign(step, diff)
+
+        rotated_legs = pygame.transform.rotate(legs_img, self.leg_angle)
+        screen.blit(rotated_legs, rotated_legs.get_rect(center=(cx, cy)).topleft)
+
+        # Body
+        body_img = self.playerBodyPistol if self.weapon == "pistol" else self.playerBody
+        rotated_body = pygame.transform.rotate(body_img, self.angle)
+        rect_body    = rotated_body.get_rect(center=(cx, cy))
+        # Body angle interpolation
+        diff = (self._target_angle - self.angle + 180) % 360 - 180
+        step = BODY_ROT_SPEED * dt
+        if abs(diff) <= step:
+            self.angle = self._target_angle
+        else:
+            self.angle += math.copysign(step, diff)        
+        screen.blit(rotated_body, rect_body.topleft)
+
+        # Head
+        rotated_head = pygame.transform.rotate(self.playerHead, self.angle)
+         # Head angle interpolation
+        diff = (self._target_angle - self.head_angle + 180) % 360 - 180
+        step = HEAD_ROT_SPEED * dt
+        if abs(diff) <= step:
+            self.head_angle = self._target_angle
+        else:
+            self.head_angle += math.copysign(step, diff)
+
+        rotated_head = pygame.transform.rotate(self.playerHead, self.head_angle)
+        screen.blit(rotated_head, rotated_head.get_rect(center=(cx, cy)).topleft)
+
+        self._draw_body_hp(screen, rect_body)
 
     def _draw_body_hp(self, screen, sprite_rect):
-        """Thin HP bar above the sprite, coloured by overall health."""
         bar_w, bar_h = 60, 6
         bx = sprite_rect.centerx - bar_w // 2
         by = sprite_rect.top - 12
@@ -241,18 +287,12 @@ class Player:
             b.draw(screen, camera_x, camera_y)
 
     def draw_hud(self, screen):
-        """
-        Main HUD: overall HP bar (top-left) + ammo + weapon.
-        Per-limb bars and moodles drawn by body.draw().
-        Inventory drawn by inventory.draw() / chest_ui.draw().
-        """
         PAD   = 20
         bar_w = 260
         bar_h = 28
         bx, by = PAD, PAD
         ratio  = max(0.0, self.body.overall_ratio)
 
-        # Overall HP panel
         panel = pygame.Surface((bar_w + 16, bar_h + 16), pygame.SRCALPHA)
         panel.fill((0, 0, 0, 140))
         screen.blit(panel, (bx - 8, by - 8))
@@ -271,10 +311,8 @@ class Player:
         screen.blit(num, (bx + bar_w // 2 - num.get_width() // 2,
                           by + bar_h // 2 - num.get_height() // 2))
 
-        # Body-part bars + moodles
         self.body.draw(screen)
 
-        # Weapon / ammo row  (placed below moodle area — far right bottom)
         af = pygame.font.SysFont(None, 34, bold=True)
         wf = pygame.font.SysFont(None, 24, bold=True)
         wx = settings.WIDTH - 260
@@ -292,15 +330,12 @@ class Player:
                                  True, (255, 255, 255))
                 screen.blit(atxt, (wx, wy + 24))
 
-        # Hints
         hf = pygame.font.SysFont(None, 22)
         screen.blit(hf.render("[I]/[Tab] Inventory   [H] Health", True, (130, 130, 140)),
                     (PAD, settings.HEIGHT - 26))
 
-        # Floating damage numbers
         for dn in self.damage_numbers:
             dn.draw(screen)
 
-        # Inventory & chest on top of everything
         self.inventory.draw(screen)
         self.chest_ui.draw(screen)

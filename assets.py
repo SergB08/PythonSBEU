@@ -51,13 +51,6 @@ def load_menu_textures():
 
 # ── Player sprites ────────────────────────────────────────────────────────────
 def load_player_sprites2():
-    tempidle  = pygame.image.load("textures/playerTemp/idleTemp.png").convert_alpha()
-    tempwalk1 = pygame.image.load("textures/playerTemp/walk1Temp.png").convert_alpha()
-    tempwalk2 = pygame.image.load("textures/playerTemp/walk2Temp.png").convert_alpha()
-    
-    
-    
-    
     playerHead = pygame.image.load("textures/player/playerHead.png").convert_alpha()
     
     playerBody = pygame.image.load("textures/player/body/playerBody.png").convert_alpha()
@@ -69,13 +62,10 @@ def load_player_sprites2():
     playerLegsStepR1 = pygame.image.load("textures/player/legs/playerLegsStepR1.png").convert_alpha()
     playerLegsStepR2 = pygame.image.load("textures/player/legs/playerLegsStepR2.png").convert_alpha()
     
-    playerLegsIdle = {"legsIdleAnim": playerLegsIdle}
-    playerLegsWalk = {"legsWalkAnim": [playerLegsIdle, playerLegsStepL1, playerLegsStepL2, playerLegsStepL1, playerLegsIdle, playerLegsStepR1, playerLegsStepR2, playerLegsStepR1]}
+    playerLegsIdleAnim = {"legsIdleAnim": playerLegsIdle}
+    playerLegsWalkAnim = {"legsWalkAnim": [playerLegsIdle, playerLegsStepL1, playerLegsStepL2, playerLegsStepL1, playerLegsIdle, playerLegsStepR1, playerLegsStepR2, playerLegsStepR1]}
     
-    playerIdle = {"tempIdleAnim": tempidle}
-    playerWalk = {"tempWalk": [tempwalk1, tempwalk2]}
-    return playerIdle, playerWalk, playerLegsIdle, playerLegsWalk, playerHead, playerBody, playerBodyPistol
-
+    return playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol
 
 # ── Turret sprites ────────────────────────────────────────────────────────────
 def load_turret_sprites():

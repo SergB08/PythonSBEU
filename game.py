@@ -3,7 +3,7 @@ import pygame
 import settings
 import controls
 from entities.player import Player, draw_crosshair
-from assets import load_player_sprites2
+#from assets import load_player_sprites2
 from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
@@ -15,9 +15,11 @@ _death_screen = None   # lazy singleton
 
 
 def init_game(floor_tiles):
-    animations, idles = load_player_sprites2()
+    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
     world  = generate_world(len(floor_tiles))
-    player = Player(animations, idles)
+    player = Player(playerHead, playerBody, playerBodyPistol,
+                playerLegsIdleAnim["legsIdleAnim"],
+                playerLegsWalkAnim["legsWalkAnim"])
     player.world_x = world.spawn_x * settings.TILE_SIZE
     player.world_y = world.spawn_y * settings.TILE_SIZE
 
@@ -35,11 +37,13 @@ def init_game(floor_tiles):
 
 
 def init_safe_room(floor_tiles, existing_player=None):
-    animations, idles = load_player_sprites2()
+    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
     world = generate_safe_room_world(len(floor_tiles))
 
     if existing_player is None:
-        player = Player(animations, idles)
+        player = Player(playerHead, playerBody, playerBodyPistol,
+                playerLegsIdleAnim["legsIdleAnim"],
+                playerLegsWalkAnim["legsWalkAnim"])
     else:
         player = existing_player
         player.bullets = []
@@ -65,7 +69,7 @@ def run_safe_room(screen, dt, events, world, player, safe_room,
     safe_room.draw(screen, camera_x, camera_y, player)
 
     player.update(keys, dt, world, pygame.mouse.get_pressed(), events)
-    player.draw(screen, keys)
+    player.draw(screen, keys, dt)
     player.draw_bullets(screen, camera_x, camera_y)
     player.draw_hud(screen)
 
@@ -119,7 +123,7 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
     draw_world(screen, world, floor_tiles, wall_tiles, ladder_img, camera_x, camera_y)
     draw_minimap(screen, world, player)
-    player.draw(screen, keys)
+    player.draw(screen, keys, dt)
     player.draw_bullets(screen, camera_x, camera_y)
 
     if near_ladder_blocked:
