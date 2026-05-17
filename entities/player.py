@@ -68,7 +68,7 @@ class Player:
         if Player.SHOOT_SOUND is None:
             Player.SHOOT_SOUND = pygame.mixer.Sound(assets.PlayerPistolShot)
 
-    # ── alive shim ───────────────────────────────────────────────────────── #
+    # ── alive shi  m ───────────────────────────────────────────────────────── #
     @property
     def alive(self):
         return self.body.alive
