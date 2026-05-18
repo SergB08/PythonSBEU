@@ -8,7 +8,7 @@ Level Portal (enter dungeon). Uses the same floor/wall tiles as regular levels.
 import pygame
 import settings
 
-INTERACT_RANGE = settings.TILE_SIZE * 2.5
+INTERACT_RANGE = settings.TILE_SIZE * 1.25
 
 
 class SafeRoomObject:
@@ -83,9 +83,10 @@ class SafeRoom:
         cx = world.spawn_x
         cy = world.spawn_y
 
-        self.bed    = Bed(cx - 4, cy - 1)
-        self.chest  = ChestObject(cx + 3, cy - 1)
-        self.portal = LevelPortal(cx + 6, cy - 2)
+        # Interactable object spawn coordinates
+        self.bed    = Bed(cx - 6, cy - 4)
+        self.chest  = ChestObject(cx + 0, cy - -3)
+        self.portal = LevelPortal(cx + 5, cy - 2)
         self.objects = [self.bed, self.chest, self.portal]
 
         self._heal_msg   = 0.0

@@ -269,18 +269,18 @@ class Player:
         rotated_head = pygame.transform.rotate(self.playerHead, self.head_angle)
         screen.blit(rotated_head, rotated_head.get_rect(center=(cx, cy)).topleft)
 
-        self._draw_body_hp(screen, rect_body)
+       #self._draw_body_hp(screen, rect_body)
 
-    def _draw_body_hp(self, screen, sprite_rect):
-        bar_w, bar_h = 60, 6
-        bx = sprite_rect.centerx - bar_w // 2
-        by = sprite_rect.top - 12
-        ratio = max(0.0, self.body.overall_ratio)
-        col = ((int(255 * (1 - ratio)), int(210 * ratio), 0))
-        pygame.draw.rect(screen, (60, 0, 0), (bx, by, bar_w, bar_h))
-        if ratio > 0:
-            pygame.draw.rect(screen, col, (bx, by, int(bar_w * ratio), bar_h))
-        pygame.draw.rect(screen, (180, 180, 180), (bx, by, bar_w, bar_h), 1)
+    # def _draw_body_hp(self, screen, sprite_rect):
+    #     bar_w, bar_h = 60, 6
+    #     bx = sprite_rect.centerx - bar_w // 2
+    #     by = sprite_rect.top - 12
+    #     ratio = max(0.0, self.body.overall_ratio)
+    #     col = ((int(255 * (1 - ratio)), int(210 * ratio), 0))
+    #     pygame.draw.rect(screen, (60, 0, 0), (bx, by, bar_w, bar_h))
+    #     if ratio > 0:
+    #         pygame.draw.rect(screen, col, (bx, by, int(bar_w * ratio), bar_h))
+    #     pygame.draw.rect(screen, (180, 180, 180), (bx, by, bar_w, bar_h), 1)
 
     def draw_bullets(self, screen, camera_x, camera_y):
         for b in self.bullets:

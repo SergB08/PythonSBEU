@@ -150,7 +150,7 @@ class Turret:
     DETECT_RANGE   = 800
     FIRE_RANGE     = 750
     AIM_TIME       = 0.5
-    FIRE_COOLDOWN  = 0.036
+    FIRE_COOLDOWN  = 0.1 #### щоб зробити більшу скорострільність треба зробити коротше звук постріла
     HEAD_ROT_SPEED = 300
 
     ANGRY_ANIM_SPEED = 0.75

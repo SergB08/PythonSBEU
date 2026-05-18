@@ -1,5 +1,6 @@
 import random
 
+from level import world
 from level.world import World, WALL, FLOOR
 from level.rooms import generate_rooms
 
@@ -35,16 +36,18 @@ def generate_safe_room_world(floor_count):
     world.level = 0   # 0 = hub / safe room
 
     # Build a grid filled with walls
-    room_size = 20          # tiles wide/tall for the safe room interior
+    #room_size = 20          # tiles wide/tall for the safe room interior
+    room_w = 12
+    room_h = 8
     padding   = 3           # wall border
-    total     = room_size + padding * 2
+    total_w = room_w + padding * 2
+    total_h = room_h + padding * 2
+    
+    world.tiles        = [[1] * total_w for _ in range(total_h)]
+    world.floor_variant = [[0] * total_w for _ in range(total_h)]
 
-    world.tiles        = [[1] * total for _ in range(total)]
-    world.floor_variant = [[0] * total for _ in range(total)]
-
-    # Carve out the interior floor
-    for y in range(padding, padding + room_size):
-        for x in range(padding, padding + room_size):
+    for y in range(padding, padding + room_h):
+        for x in range(padding, padding + room_w):
             world.tiles[y][x] = FLOOR
 
     # Randomise floor variants
@@ -53,8 +56,8 @@ def generate_safe_room_world(floor_count):
             world.floor_variant[y][x] = random.randint(0, max(0, floor_count - 1))
 
     # Spawn player in the centre
-    world.spawn_x = total // 2
-    world.spawn_y = total // 2
+    world.spawn_x = total_w // 2
+    world.spawn_y = total_h // 2
 
     # No turrets, no ladder in safe room
     world.turrets       = []
@@ -62,7 +65,7 @@ def generate_safe_room_world(floor_count):
     world.ladder_x      = None
     world.ladder_y      = None
 
-    world.width  = total
-    world.height = total
+    world.width  = total_w
+    world.height = total_h
 
     return world

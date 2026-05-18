@@ -4,8 +4,8 @@ import os
 import settings
 
 # ── Sound paths ───────────────────────────────────────────────────────────────
-PlayerPistolShot = "sounds/stalkerPM.ogg"
-TurretShot       = "sounds/stalkerMP5.ogg"
+PlayerPistolShot = "sounds/gun/stalkerPM_shortened.ogg"
+TurretShot       = "sounds/gun/stalkerMP5_shortened.ogg"
 
 # ── Main game textures and icon ───────────────────────────────────────────────
 def load_assets():
