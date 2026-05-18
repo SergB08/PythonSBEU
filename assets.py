@@ -69,15 +69,14 @@ def load_player_sprites2():
 
 # ── Turret sprites ────────────────────────────────────────────────────────────
 def load_turret_sprites():
-    def _load(filename):
-        img = pygame.image.load(
-            os.path.join("textures/turret", filename)
-        ).convert_alpha()
-        return pygame.transform.scale(img, (img.get_width() * 10, img.get_height() * 10))
+    turretHead = pygame.image.load("textures/turret/Head/headIdle.png").convert_alpha()
+    turretHeadAngry1 = pygame.image.load("textures/turret/Head/headAngry1.png").convert_alpha()
+    turretHeadAngry2 = pygame.image.load("textures/turret/Head/headAngry2.png").convert_alpha()
 
-    legs      = _load("legs.png")
-    head_calm = _load("headcalm.png")
-    head_ang1 = _load("headangry1.png")
-    head_ang2 = _load("headangry2.png")
-
-    return legs, head_calm, [head_ang1, head_ang2]
+    turretLegs = pygame.image.load("textures/turret/legsNew.png").convert_alpha()
+    
+    turretHeadIdleAnim = {"headIdleAnim": turretHead}
+    turretHeadCautiousAnim = {"headCautiousAnim": turretHeadAngry1}
+    turretHeadAngryAnim = {"headAngryAnim": [turretHeadAngry1, turretHeadAngry2]}
+    
+    return turretLegs, turretHeadIdleAnim, turretHeadAngryAnim, turretHeadCautiousAnim

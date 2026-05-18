@@ -1,9 +1,10 @@
 # game.py
 import pygame
+from level import world
 import settings
 import controls
 from entities.player import Player, draw_crosshair
-#from assets import load_player_sprites2
+from entities.turret import Turret
 from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
@@ -23,17 +24,18 @@ def init_game(floor_tiles):
     player.world_x = world.spawn_x * settings.TILE_SIZE
     player.world_y = world.spawn_y * settings.TILE_SIZE
 
-    legs, head_calm, head_angry = load_turret_sprites()
+    legs, head_idle, head_angry, head_cautious = load_turret_sprites()
     world.turrets = []
     for tx, ty in world.turret_spawns:
-        from entities.turret import Turret
         world.turrets.append(Turret(
             tx * settings.TILE_SIZE,
             ty * settings.TILE_SIZE,
-            legs, head_calm, head_angry
+            legs, head_idle, head_cautious, head_angry
         ))
 
     return world, player
+
+
 
 
 def init_safe_room(floor_tiles, existing_player=None):

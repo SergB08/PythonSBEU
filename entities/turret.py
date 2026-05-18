@@ -155,23 +155,27 @@ class Turret:
 
     ANGRY_ANIM_SPEED = 0.75
     SHOOT_SOUND      = None
+    
+    TURRET_SPRITE_OFFSET = 90  # adjust until sprites face correct direction
 
-    HEAD_SPRITE_OFFSET = -90
+    #HEAD_SPRITE_OFFSET = 0
 
-    def __init__(self, world_x, world_y, legs_img, head_calm, head_angry):
+    def __init__(self, world_x, world_y, legs_img, head_idle, head_cautious, head_angry):
         self.world_x = float(world_x)
         self.world_y = float(world_y)
 
         self.hp    = self.MAX_HP
         self.alive = True
+        
+        def prep(img):
+            return pygame.transform.scale(img, (size, size))    
 
-        self.legs_img  = legs_img
-        legs_size      = legs_img.get_size()
-        angr_head_size = head_angry[0].get_size()
+        size = 128  # adjust to taste
 
-        self.head_calm  = pygame.transform.smoothscale(head_calm, legs_size)
-        self.head_angry = [pygame.transform.smoothscale(f, angr_head_size)
-                           for f in head_angry]
+        self.legs_img      = prep(legs_img)
+        self.head_idle     = prep(head_idle["headIdleAnim"])
+        self.head_cautious = prep(head_cautious["headCautiousAnim"])
+        self.head_angry    = [prep(f) for f in head_angry["headAngryAnim"]]
 
         self.head_angle   = 0.0
         self.state        = "idle"
@@ -179,11 +183,11 @@ class Turret:
         self._fire_timer  = 0.0
         self._angry_frame = 0.0
 
+
         self.bullets        = []
         self.damage_numbers = []
 
         if Turret.SHOOT_SOUND is None:
-            #Turret.SHOOT_SOUND = pygame.mixer.Sound(settings.SOUND_SHOOT)
             Turret.SHOOT_SOUND = pygame.mixer.Sound(assets.TurretShot)
 
     # ── helpers ──────────────────────────────────────────────────────────── #
@@ -286,10 +290,12 @@ class Turret:
         if self.state == "firing":
             fi  = int(self._angry_frame) % len(self.head_angry)
             src = self.head_angry[fi]
+        elif self.state == "alert":
+            src = self.head_cautious
         else:
-            src = self.head_calm
+            src = self.head_idle
 
-        rotated = pygame.transform.rotate(src, self.head_angle + self.HEAD_SPRITE_OFFSET)
+        rotated = pygame.transform.rotate(src, self.head_angle + self.TURRET_SPRITE_OFFSET)
         hr      = rotated.get_rect(center=(sx, sy))
         screen.blit(rotated, hr.topleft)
 
