@@ -160,12 +160,14 @@ class Turret:
 
     #HEAD_SPRITE_OFFSET = 0
 
-    def __init__(self, world_x, world_y, legs_img, head_idle, head_cautious, head_angry):
+    def __init__(self, world_x, world_y, legs_img, head_idle, head_cautious, head_angry, initial_angle=0.0):
         self.world_x = float(world_x)
         self.world_y = float(world_y)
 
         self.hp    = self.MAX_HP
         self.alive = True
+        
+        self._idle_angle = initial_angle
         
         def prep(img):
             return pygame.transform.scale(img, (size, size))    
@@ -183,6 +185,7 @@ class Turret:
         self._fire_timer  = 0.0
         self._angry_frame = 0.0
 
+        self.head_angle = initial_angle
 
         self.bullets        = []
         self.damage_numbers = []
@@ -231,7 +234,7 @@ class Turret:
             if dist <= self.DETECT_RANGE:
                 self.state      = "alert"
                 self._aim_timer = self.AIM_TIME
-            self._rotate_toward(0, dt * 0.3)
+            self._rotate_toward(self._idle_angle, dt * 0.3)
 
         elif self.state == "alert":
             self._rotate_toward(target, dt)

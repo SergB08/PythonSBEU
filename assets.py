@@ -36,7 +36,7 @@ def load_assets():
             img = pygame.transform.scale(img, (settings.TILE_SIZE, settings.TILE_SIZE))
             wall_tiles.append(img)
 
-    ladder = pygame.image.load("textures/drabina.png").convert()
+    ladder = pygame.image.load("textures/exit.png").convert()
     ladder = pygame.transform.scale(ladder, (settings.TILE_SIZE, settings.TILE_SIZE))
 
     return icon, floor_tiles, wall_tiles, ladder

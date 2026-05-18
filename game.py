@@ -9,13 +9,14 @@ from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
 from level.safe_room import SafeRoom
-
+import random, math
 from death_screen import DeathScreen
 
 _death_screen = None   # lazy singleton
 
 
 def init_game(floor_tiles):
+    import random, math
     playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
     world  = generate_world(len(floor_tiles))
     player = Player(playerHead, playerBody, playerBodyPistol,
@@ -27,15 +28,44 @@ def init_game(floor_tiles):
     legs, head_idle, head_angry, head_cautious = load_turret_sprites()
     world.turrets = []
     for tx, ty in world.turret_spawns:
+        cx = tx * settings.TILE_SIZE
+        cy = ty * settings.TILE_SIZE
+
+        offset = settings.TILE_SIZE * random.randint(2, 4)
+        angle_pos = random.uniform(0, 360)
+        rad = math.radians(angle_pos)
+        spawn_x = cx + math.cos(rad) * offset
+        spawn_y = cy - math.sin(rad) * offset
+
+        spawn_x, spawn_y = _find_nearest_floor(world, spawn_x, spawn_y)
+        
+        toward_center = math.degrees(math.atan2(-(cy - spawn_y), cx - spawn_x)) - 90
+        deviation = random.uniform(-30, 30)
+        initial_angle = toward_center + deviation
+
         world.turrets.append(Turret(
-            tx * settings.TILE_SIZE,
-            ty * settings.TILE_SIZE,
-            legs, head_idle, head_cautious, head_angry
+            spawn_x, spawn_y,
+            legs, head_idle, head_cautious, head_angry,
+            initial_angle=initial_angle
         ))
 
     return world, player
 
+from level.world import FLOOR
 
+def _find_nearest_floor(world, wx, wy):
+    ts = settings.TILE_SIZE
+    tx = int(wx // ts)
+    ty = int(wy // ts)
+    # search in expanding radius until floor tile found
+    for r in range(0, 10):
+        for dy in range(-r, r + 1):
+            for dx in range(-r, r + 1):
+                nx, ny = tx + dx, ty + dy
+                if 0 <= ny < len(world.tiles) and 0 <= nx < len(world.tiles[0]):
+                    if world.tiles[ny][nx] == FLOOR:
+                        return nx * ts + ts // 2, ny * ts + ts // 2
+    return wx, wy
 
 
 def init_safe_room(floor_tiles, existing_player=None):
