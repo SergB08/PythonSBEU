@@ -80,3 +80,10 @@ def load_turret_sprites():
     turretHeadAngryAnim = {"headAngryAnim": [turretHeadAngry1, turretHeadAngry2]}
     
     return turretLegs, turretHeadIdleAnim, turretHeadAngryAnim, turretHeadCautiousAnim
+
+def load_muzzleFlash():
+    muzzleFlash1 = pygame.image.load("textures/shot1.png").convert_alpha()
+    muzzleFlash2 = pygame.image.load("textures/shot2.png").convert_alpha()
+    muzzleFlash3 = pygame.image.load("textures/shot3.png").convert_alpha()
+    
+    return muzzleFlash1, muzzleFlash2, muzzleFlash3

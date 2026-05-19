@@ -4,6 +4,7 @@ import math
 
 import settings
 import assets
+from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
 
@@ -152,6 +153,7 @@ class Turret:
     AIM_TIME       = 0.5
     FIRE_COOLDOWN  = 0.1 #### щоб зробити більшу скорострільність треба зробити коротше звук постріла
     HEAD_ROT_SPEED = 300
+    TURRET_MUZZLE_BARREL_OFFSET = 70 
 
     ANGRY_ANIM_SPEED = 0.75
     SHOOT_SOUND      = None
@@ -189,6 +191,8 @@ class Turret:
 
         self.bullets        = []
         self.damage_numbers = []
+        self.muzzle_flashes = []
+        self._muzzle_frames = assets.load_muzzleFlash()
 
         if Turret.SHOOT_SOUND is None:
             Turret.SHOOT_SOUND = pygame.mixer.Sound(assets.TurretShot)
@@ -226,6 +230,9 @@ class Turret:
             b.update(dt, world)
         self.bullets = [b for b in self.bullets if b.alive]
 
+        for mf in self.muzzle_flashes: mf.update(dt)
+        self.muzzle_flashes = [mf for mf in self.muzzle_flashes if mf.alive]
+
         for dn in self.damage_numbers:
             dn.update(dt)
         self.damage_numbers = [d for d in self.damage_numbers if d.alive]
@@ -259,6 +266,9 @@ class Turret:
 
     def _shoot(self):
         self.bullets.append(Bullet(self.world_x, self.world_y, self.head_angle))
+        self.muzzle_flashes.append(
+            MuzzleFlash(self.head_angle, self._muzzle_frames, barrel_offset=self.TURRET_MUZZLE_BARREL_OFFSET, size=64)
+        )
         Turret.SHOOT_SOUND.set_volume(settings.VOLUME)
         Turret.SHOOT_SOUND.play()
         self._fire_timer = self.FIRE_COOLDOWN
@@ -301,6 +311,9 @@ class Turret:
         rotated = pygame.transform.rotate(src, self.head_angle + self.TURRET_SPRITE_OFFSET)
         hr      = rotated.get_rect(center=(sx, sy))
         screen.blit(rotated, hr.topleft)
+
+        for mf in self.muzzle_flashes:
+            mf.draw(screen, camera_x, camera_y, self.world_x, self.world_y)
 
         self._draw_health_bar(screen, sx, sy)
 

@@ -8,6 +8,7 @@ from level.world import WALL
 from entities.turret import PlayerBullet, DamageNumber
 from ui.health import BodyHealth
 from ui.inventory import InventoryUI, ChestUI
+from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
 
@@ -31,7 +32,7 @@ def draw_crosshair(screen):
 
 class Player:
 
-    SHOOT_COOLDOWN = 0.20
+    SHOOT_COOLDOWN = 0.15
     MAG_SIZE       = 12
     RELOAD_TIME    = 1.5
     SHOOT_SOUND    = None
@@ -73,6 +74,8 @@ class Player:
 
         self.bullets        = []
         self.damage_numbers = []
+        self.muzzle_flashes = []
+        self._muzzle_frames = assets.load_muzzleFlash()
 
         if Player.SHOOT_SOUND is None:
             Player.SHOOT_SOUND = pygame.mixer.Sound(assets.PlayerPistolShot)
@@ -165,6 +168,13 @@ class Player:
         if keys[pygame.K_w]: dy -= 1; moving = True
         if keys[pygame.K_s]: dy += 1; moving = True
 
+        # per-click shoot flag (set true only on the frame the button is pressed)
+        _shoot_pressed = False
+        if events:
+            for e in events:
+                if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
+                    _shoot_pressed = True
+
         length = math.hypot(dx, dy)
         if length > 0:
             dx /= length; dy /= length
@@ -184,9 +194,12 @@ class Player:
                 self.ammo       = self.MAG_SIZE
                 self._reloading = False
 
+        # pistol: single shot per click; swap to mouse_buttons[0] for autofire weapons
+        shoot_input = _shoot_pressed if self.weapon == "pistol" else mouse_buttons[0]
+
         self._shoot_timer -= dt
         if (self.weapon == "pistol"
-                and mouse_buttons[0]
+                and shoot_input
                 and self._shoot_timer <= 0
                 and not self._reloading
                 and not self.inventory.open
@@ -200,16 +213,23 @@ class Player:
                 offset_x = -math.sin(rad) * 70   # forward offset
                 offset_y = -math.cos(rad) * 70
                 self.bullets.append(PlayerBullet(self.world_x + offset_x, self.world_y + offset_y, shoot_angle))
-                #self.bullets.append(PlayerBullet(self.world_x, self.world_y, shoot_angle))
                 self.ammo -= 1
                 self._shoot_timer = self.SHOOT_COOLDOWN
+                self.muzzle_flashes.append(
+                    MuzzleFlash(shoot_angle, self._muzzle_frames,
+                                barrel_offset=128, size=64)
+                )
                 Player.SHOOT_SOUND.set_volume(settings.VOLUME)
                 Player.SHOOT_SOUND.play()
             else:
-                self.start_reload()
+                if settings.AUTO_RELOAD_ON_EMPTY:
+                    self.start_reload()
 
         for b in self.bullets: b.update(dt, world)
         self.bullets = [b for b in self.bullets if b.alive]
+
+        for mf in self.muzzle_flashes: mf.update(dt)
+        self.muzzle_flashes = [mf for mf in self.muzzle_flashes if mf.alive]
 
         for dn in self.damage_numbers: dn.update(dt)
         self.damage_numbers = [d for d in self.damage_numbers if d.alive]
@@ -268,6 +288,9 @@ class Player:
 
         rotated_head = pygame.transform.rotate(self.playerHead, self.head_angle)
         screen.blit(rotated_head, rotated_head.get_rect(center=(cx, cy)).topleft)
+
+        for mf in self.muzzle_flashes:
+            mf.draw_screen(screen, self.world_x, self.world_y)
 
        #self._draw_body_hp(screen, rect_body)
 
