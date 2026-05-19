@@ -87,7 +87,7 @@ PART_NAMES = ["Head", "Torso", "L.Arm", "R.Arm", "L.Leg", "R.Leg"]
 
 # Damage multipliers: head hits hurt more
 PART_DAMAGE_MULT = {
-    "Head":  2.0,
+    "Head":  10.0,
     "Torso": 1.0,
     "L.Arm": 0.6,
     "R.Arm": 0.6,
