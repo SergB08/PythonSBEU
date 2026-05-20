@@ -179,10 +179,12 @@ class Inventory:
         self.open = not self.open
 
     def add_item(self, item):
-        # Try stacking first
+        # Try stacking first — exhaust ALL partial stacks before using empty slot
         if item.stackable:
             for slot in self._slots:
-                if (slot.item and slot.item.item_type == item.item_type
+                if slot.item is None:
+                    continue
+                if (slot.item.item_type == item.item_type
                         and slot.item.count < slot.item.max_stack):
                     can_add = slot.item.max_stack - slot.item.count
                     add_amt = min(can_add, item.count)
@@ -190,7 +192,7 @@ class Inventory:
                     item.count -= add_amt
                     if item.count <= 0:
                         return True
-        # Find empty slot
+        # Find empty slot for remainder
         for slot in self._slots:
             if slot.item is None:
                 slot.item = item

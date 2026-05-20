@@ -2,6 +2,7 @@ import pygame
 import settings
 from main_menu import Button
 from assets import load_menu_textures
+import assets
 
 
 class DeathScreen:
@@ -18,6 +19,14 @@ class DeathScreen:
             "restart": Button(cx, cy,       bw, bh, "RESTART",   self.font_btn, tex_idle, tex_hover, tex_click),
             "menu":    Button(cx, cy + 120, bw, bh, "MAIN MENU", self.font_btn, tex_idle, tex_hover, tex_click),
         }
+
+        # Play death sound once on init
+        try:
+            sound = pygame.mixer.Sound(assets.PlayerDeath)
+            sound.set_volume(settings.VOLUME)
+            sound.play()
+        except Exception:
+            pass
 
     def run(self, screen, events):
         overlay = pygame.Surface((settings.WIDTH, settings.HEIGHT), pygame.SRCALPHA)
