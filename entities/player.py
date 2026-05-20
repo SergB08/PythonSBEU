@@ -68,6 +68,11 @@ class Player:
         
         self.body      = BodyHealth()
         self.inventory = InventoryUI()
+        #спавн з бінтіками
+        from inventory import make_bandage
+        self.inventory.add_item(make_bandage())
+        self.inventory.add_item(make_bandage())
+        
         self.chest_ui  = ChestUI()
 
         self.weapon        = "pistol"
@@ -149,6 +154,7 @@ class Player:
 
         if events:
             for e in events:
+                self.body.handle_event(e, self.inventory)
                 self.inventory.handle_event(e)
                 self.chest_ui.handle_event(e)
 

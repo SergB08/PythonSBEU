@@ -39,7 +39,8 @@ C_FULL   = (60,  200,  60)
 C_MID    = (220, 180,  30)
 C_LOW    = (220,  60,  40)
 C_BLEED  = (200,  30,  30)
-C_FRAC   = (180, 160, 100)
+# C_FRAC   = (180, 160, 100)  # fractured — unused
+C_BANDAGE_GLOW = (180, 220, 255, 80)   # highlight when dragging bandage over a bar
 
 FONT_CACHE: dict = {}
 
@@ -86,7 +87,6 @@ PART_NAMES = ["Head", "Torso", "L.Arm", "R.Arm", "L.Leg", "R.Leg"]
 
 
 def _random_part() -> str:
-    """Pick a body part using PART_HIT_WEIGHT distribution."""
     parts   = list(PART_HIT_WEIGHT.keys())
     weights = [PART_HIT_WEIGHT[p] for p in parts]
     return random.choices(parts, weights=weights, k=1)[0]
@@ -100,14 +100,13 @@ class BodyPart:
         self.name      = name
         self.hp        = float(self.MAX_HP)
         self.bleeding  = False
-        self.fractured = False
+        # self.fractured = False   # unused
 
     @property
     def alive(self):
         return self.hp > 0
 
     def take_damage(self, amount: float):
-        """Apply final (already-multiplied) damage directly."""
         self.hp = max(0.0, self.hp - amount)
 
     def heal(self, amount: float):
@@ -127,17 +126,21 @@ class BodyHealth:
     def __init__(self):
         self.parts: dict[str, BodyPart] = {n: BodyPart(n) for n in PART_NAMES}
         self.alive = True
-        self.sick   = False
-        self.tired  = False
+        # self.sick   = False   # unused
+        # self.tired  = False   # unused
         self._panel_open = False
+
+        # Bandage drag state
+        self._dragging_bandage = False
+        self._drag_pos         = (0, 0)
+        self._drag_item        = None   # Item reference from inventory
+        self._drag_src_slot    = None   # Slot reference to remove from
+        # Cached bar rects for hit-testing (populated in _draw_full_panel)
+        self._bar_rects: dict[str, pygame.Rect] = {}
 
     # ── damage ─────────────────────────────────────────────────────────── #
 
     def take_damage(self, amount: float, part_name: str = "Torso"):
-        """
-        Hit a specific part. Applies that part's damage multiplier.
-        Always deals at least 1 damage so hits are never silent.
-        """
         if not self.alive:
             return
         part  = self.parts.get(part_name, self.parts["Torso"])
@@ -149,10 +152,6 @@ class BodyHealth:
         self._check_death()
 
     def take_damage_any(self, amount: float):
-        """
-        Random hit using PART_HIT_WEIGHT — selects one body part,
-        applies its multiplier, guaranteed to deal damage every call.
-        """
         if not self.alive:
             return
         part_name = _random_part()
@@ -168,10 +167,10 @@ class BodyHealth:
         for part in self.parts.values():
             part.heal(amount)
             part.bleeding  = False
-            part.fractured = False
+            # part.fractured = False   # unused
         self.alive = True
-        self.sick   = False
-        self.tired  = False
+        # self.sick   = False   # unused
+        # self.tired  = False   # unused
 
     def stop_bleeding(self, part_name: str):
         part = self.parts.get(part_name)
@@ -222,6 +221,65 @@ class BodyHealth:
     def toggle_panel(self):
         self._panel_open = not self._panel_open
 
+    # ── bandage drag-drop (called from player with inventory reference) ── #
+
+    def handle_event(self, event, inventory_ui):
+        """
+        Call this each frame to support dragging a bandage from the inventory
+        onto a limb bar in the health panel. Pass the InventoryUI instance.
+        Only active when the health panel is open.
+        """
+        if not self._panel_open:
+            return
+
+        mx, my = pygame.mouse.get_pos()
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Check if user clicked on a bandage in inventory
+            if inventory_ui.open:
+                for slot in inventory_ui.inv_slots:
+                    if (slot.item and slot.item.item_type == "bandage"
+                            and slot.rect.collidepoint(mx, my)):
+                        self._dragging_bandage = True
+                        self._drag_item        = slot.item
+                        self._drag_src_slot    = slot
+                        slot.item = None          # lift from slot
+                        break
+
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self._dragging_bandage:
+                dropped = False
+                for part_name, bar_rect in self._bar_rects.items():
+                    if bar_rect.collidepoint(mx, my):
+                        part = self.parts[part_name]
+                        part.bleeding = False
+                        part.heal(25)             # bandage also heals a little
+                        # consume one bandage
+                        self._drag_item.count -= 1
+                        if self._drag_item.count <= 0:
+                            self._drag_src_slot.item = None
+                        else:
+                            self._drag_src_slot.item = self._drag_item
+                        dropped = True
+                        break
+                if not dropped:
+                    # return item to slot
+                    if self._drag_src_slot.item is None:
+                        self._drag_src_slot.item = self._drag_item
+                    else:
+                        # slot was taken in the meantime — find another
+                        for slot in inventory_ui.inv_slots:
+                            if slot.item is None:
+                                slot.item = self._drag_item
+                                break
+                self._dragging_bandage = False
+                self._drag_item        = None
+                self._drag_src_slot    = None
+
+        elif event.type == pygame.MOUSEMOTION:
+            if self._dragging_bandage:
+                self._drag_pos = (mx, my)
+
     # ── draw ───────────────────────────────────────────────────────────── #
 
     def draw(self, screen):
@@ -229,6 +287,9 @@ class BodyHealth:
         self._draw_moodles(screen)
         if self._panel_open:
             self._draw_full_panel(screen)
+        # Draw dragged bandage ghost on top of everything
+        if self._dragging_bandage and self._drag_item:
+            self._draw_drag_ghost(screen)
 
     def _draw_compact(self, screen):
         x0   = 20
@@ -248,8 +309,8 @@ class BodyHealth:
 
             weight_pct = int(PART_HIT_WEIGHT.get(name, 0) * 100)
             flags = ""
-            if part.bleeding:  flags += " ♥"
-            if part.fractured: flags += " ✕"
+            if part.bleeding: flags += " ♥"
+            # if part.fractured: flags += " ✕"   # unused
             label = font.render(f"{name}{flags} [{weight_pct}%]", True,
                                 C_BLEED if part.bleeding else C_TEXT)
             screen.blit(label, (x0 + bw + 4, y - 1))
@@ -262,8 +323,8 @@ class BodyHealth:
         if self.in_pain:  moodles.append(("Pain",     (220, 80,  80)))
         if self.injured:  moodles.append(("Injured",  (220, 130, 40)))
         if self.bleeding: moodles.append(("Bleeding", (200, 30,  30)))
-        if self.sick:     moodles.append(("Sick",     (100, 200, 80)))
-        if self.tired:    moodles.append(("Tired",    (120, 120, 200)))
+        # if self.sick:     moodles.append(("Sick",     (100, 200, 80)))   # unused
+        # if self.tired:    moodles.append(("Tired",    (120, 120, 200)))  # unused
 
         mw, mh = 90, 28
         mx = settings.WIDTH - mw - 10
@@ -279,6 +340,8 @@ class BodyHealth:
             my += mh + 4
 
     def _draw_full_panel(self, screen):
+        mx, my = pygame.mouse.get_pos()
+
         COLS = 2
         rows = (len(PART_NAMES) + 1) // COLS
         pw   = 420
@@ -293,6 +356,8 @@ class BodyHealth:
 
         title = _font(30, True).render("HEALTH", True, C_TEXT)
         screen.blit(title, (px + pw // 2 - title.get_width() // 2, py + 12))
+
+        self._bar_rects.clear()
 
         for i, (name, part) in enumerate(self.parts.items()):
             col = i % COLS
@@ -310,15 +375,24 @@ class BodyHealth:
             screen.blit(hp_surf,   (ex + 160, ey + 2))
 
             bw, bh = 160, 14
-            pygame.draw.rect(screen, (50, 0, 0), (ex, ey + 24, bw, bh))
+            bar_rect = pygame.Rect(ex, ey + 24, bw, bh)
+            self._bar_rects[name] = bar_rect
+
+            # Glow if dragging bandage over this bar
+            if self._dragging_bandage and bar_rect.collidepoint(mx, my):
+                glow_surf = pygame.Surface((bw + 8, bh + 8), pygame.SRCALPHA)
+                glow_surf.fill(C_BANDAGE_GLOW)
+                screen.blit(glow_surf, (bar_rect.x - 4, bar_rect.y - 4))
+
+            pygame.draw.rect(screen, (50, 0, 0), bar_rect)
             fw = int(bw * part.ratio)
             if fw > 0:
                 pygame.draw.rect(screen, _hp_color(part.ratio), (ex, ey + 24, fw, bh))
-            pygame.draw.rect(screen, C_BORDER, (ex, ey + 24, bw, bh), 1)
+            pygame.draw.rect(screen, C_BORDER, bar_rect, 1)
 
             flags = []
-            if part.bleeding:  flags.append(("Bleeding", C_BLEED))
-            if part.fractured: flags.append(("Fracture", C_FRAC))
+            if part.bleeding: flags.append(("Bleeding", C_BLEED))
+            # if part.fractured: flags.append(("Fracture", C_FRAC))   # unused
             fx = ex
             for ftxt, fcol in flags:
                 fs = _font(18).render(ftxt, True, fcol)
@@ -327,3 +401,15 @@ class BodyHealth:
 
         hint = _font(20).render("[H] Close", True, C_DIM)
         screen.blit(hint, (px + pw // 2 - hint.get_width() // 2, py + ph - 24))
+
+    def _draw_drag_ghost(self, screen):
+        mx, my = pygame.mouse.get_pos()
+        size = 48
+        if self._drag_item and self._drag_item.image:
+            img = pygame.transform.scale(self._drag_item.image, (size, size))
+            img.set_alpha(200)
+            screen.blit(img, (mx - size // 2, my - size // 2))
+        else:
+            surf = pygame.Surface((size, size), pygame.SRCALPHA)
+            surf.fill((230, 230, 230, 180))
+            screen.blit(surf, (mx - size // 2, my - size // 2))

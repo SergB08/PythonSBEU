@@ -139,8 +139,8 @@ def generate_rooms(world):
 
     LOOT_TABLE = [
         (make_medkit,                    0.20),
-        (make_bandage,                   0.35),
-        (lambda: make_ammo_pistol(10),   0.55),
+        (make_bandage,                   0.55),
+        (lambda: make_ammo_pistol(10),   0.25),
     ]
 
     world.loot_items = []   # List of LootItem objects
