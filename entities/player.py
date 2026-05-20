@@ -69,9 +69,10 @@ class Player:
         self.body      = BodyHealth()
         self.inventory = InventoryUI()
         #спавн з бінтіками
-        from inventory import make_bandage
+        from inventory import make_bandage, make_medkit
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
+        self.inventory.add_item(make_medkit())
         
         self.chest_ui  = ChestUI()
 
