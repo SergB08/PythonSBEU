@@ -65,6 +65,49 @@ def _get_bullet_tex():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Line-of-sight check (Bresenham ray cast по тайлах)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _has_line_of_sight(world, x1, y1, x2, y2):
+    """
+    Повертає True якщо між точками (у world-координатах) немає стін.
+    Використовує алгоритм Брезенхема по тайловій сітці.
+    """
+    from level.world import WALL
+    ts = settings.TILE_SIZE
+    tx1, ty1 = int(x1 // ts), int(y1 // ts)
+    tx2, ty2 = int(x2 // ts), int(y2 // ts)
+
+    dx = abs(tx2 - tx1)
+    dy = abs(ty2 - ty1)
+    sx = 1 if tx1 < tx2 else -1
+    sy = 1 if ty1 < ty2 else -1
+    err = dx - dy
+
+    x, y = tx1, ty1
+    h = len(world.tiles)
+    w = len(world.tiles[0])
+
+    while True:
+        if 0 <= y < h and 0 <= x < w:
+            if world.tiles[y][x] == WALL:
+                return False
+        else:
+            return False
+        if x == tx2 and y == ty2:
+            break
+        e2 = err * 2
+        if e2 > -dy:
+            err -= dy
+            x   += sx
+        if e2 < dx:
+            err += dx
+            y   += sy
+
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 class Bullet:
     """Turret bullet — brass look."""
@@ -114,7 +157,7 @@ class PlayerBullet(Bullet):
     """Player bullet — steel look."""
 
     SPEED    = 2000
-    DAMAGE   = 25#5
+    DAMAGE   = 25
     LIFETIME = 1.5
     LENGTH   = 32
     WIDTH    = 32
@@ -128,6 +171,7 @@ class PlayerBullet(Bullet):
         rotated = pygame.transform.rotate(scaled, angle)
         screen.blit(rotated, rotated.get_rect(center=(sx, sy)).topleft)
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Turret:
@@ -135,6 +179,7 @@ class Turret:
     Stationary enemy turret.
     Layers: legs (static) + head (rotates toward player).
     States: idle → alert (calm head) → firing (angry head + shooting)
+    Бачить гравця тільки якщо між ними немає стін (line-of-sight перевірка).
     """
     randomHPTurret = random.randrange(70, 120)
 
@@ -142,16 +187,14 @@ class Turret:
     DETECT_RANGE   = 800
     FIRE_RANGE     = 750
     AIM_TIME       = 0.5
-    FIRE_COOLDOWN  = 0.1 #### щоб зробити більшу скорострільність треба зробити коротше звук постріла
+    FIRE_COOLDOWN  = 0.1
     HEAD_ROT_SPEED = 300
-    TURRET_MUZZLE_BARREL_OFFSET = 70 
+    TURRET_MUZZLE_BARREL_OFFSET = 70
 
     ANGRY_ANIM_SPEED = 0.75
     SHOOT_SOUND      = None
-    
-    TURRET_SPRITE_OFFSET = 90  # adjust until sprites face correct direction
 
-    #HEAD_SPRITE_OFFSET = 0
+    TURRET_SPRITE_OFFSET = 90
 
     def __init__(self, world_x, world_y, legs_img, head_idle, head_cautious, head_angry, initial_angle=0.0):
         self.world_x = float(world_x)
@@ -159,13 +202,13 @@ class Turret:
 
         self.hp    = self.MAX_HP
         self.alive = True
-        
-        self._idle_angle = initial_angle
-        
-        def prep(img):
-            return pygame.transform.scale(img, (size, size))    
 
-        size = 128  # adjust to taste
+        self._idle_angle = initial_angle
+
+        def prep(img):
+            return pygame.transform.scale(img, (size, size))
+
+        size = 128
 
         self.legs_img      = prep(legs_img)
         self.head_idle     = prep(head_idle["headIdleAnim"])
@@ -228,15 +271,18 @@ class Turret:
             dn.update(dt)
         self.damage_numbers = [d for d in self.damage_numbers if d.alive]
 
+        # Перевірка прямої видимості (один раз на фрейм)
+        los = _has_line_of_sight(world, self.world_x, self.world_y, px, py)
+
         if self.state == "idle":
-            if dist <= self.DETECT_RANGE:
+            if dist <= self.DETECT_RANGE and los:
                 self.state      = "alert"
                 self._aim_timer = self.AIM_TIME
             self._rotate_toward(self._idle_angle, dt * 0.3)
 
         elif self.state == "alert":
             self._rotate_toward(target, dt)
-            if dist > self.DETECT_RANGE * 1.2:
+            if dist > self.DETECT_RANGE * 1.2 or not los:
                 self.state = "idle"
                 return
             self._aim_timer -= dt
@@ -246,7 +292,7 @@ class Turret:
 
         elif self.state == "firing":
             aligned = self._rotate_toward(target, dt)
-            if dist > self.DETECT_RANGE * 1.2:
+            if dist > self.DETECT_RANGE * 1.2 or not los:
                 self.state = "idle"
                 return
             self._fire_timer -= dt
@@ -257,11 +303,12 @@ class Turret:
 
     def _shoot(self):
         rad = math.radians(self.head_angle)
-        offset_x = -math.sin(rad) * 70   # forward offset
+        offset_x = -math.sin(rad) * 70
         offset_y = -math.cos(rad) * 70
-        self.bullets.append(Bullet(self.world_x+offset_x, self.world_y+offset_y, self.head_angle))
+        self.bullets.append(Bullet(self.world_x + offset_x, self.world_y + offset_y, self.head_angle))
         self.muzzle_flashes.append(
-            MuzzleFlash(self.head_angle, self._muzzle_frames, barrel_offset=self.TURRET_MUZZLE_BARREL_OFFSET, size=64)
+            MuzzleFlash(self.head_angle, self._muzzle_frames,
+                        barrel_offset=self.TURRET_MUZZLE_BARREL_OFFSET, size=64)
         )
         Turret.SHOOT_SOUND.set_volume(settings.VOLUME)
         Turret.SHOOT_SOUND.play()
