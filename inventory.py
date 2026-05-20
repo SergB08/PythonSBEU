@@ -175,28 +175,56 @@ class Inventory:
                 y = oy + row * (SLOT_SIZE + SLOT_PAD)
                 self._slots.append(Slot(x, y))
 
+    @property
+    def inv_slots(self):
+        """Convenience property to access slots"""
+        return self._slots
+
     def toggle(self):
         self.open = not self.open
 
-    def add_item(self, item):
-        # Try stacking first — exhaust ALL partial stacks before using empty slot
+    def add_item(self, item) -> bool:
+        """Add item to inventory. Handles stacking and empty slots properly."""
+        print(f"Adding item: {item.name}, count: {item.count}")  # Debug
+        
+        # For stackable items
         if item.stackable:
-            for slot in self._slots:
-                if slot.item is None:
-                    continue
-                if (slot.item.item_type == item.item_type
-                        and slot.item.count < slot.item.max_stack):
-                    can_add = slot.item.max_stack - slot.item.count
-                    add_amt = min(can_add, item.count)
-                    slot.item.count += add_amt
-                    item.count -= add_amt
-                    if item.count <= 0:
+            remaining = item.count
+            
+            # First, try to add to existing stacks
+            for slot in self.inv_slots:
+                if slot.item and slot.item.item_type == item.item_type:
+                    if slot.item.count < slot.item.max_stack:
+                        space = slot.item.max_stack - slot.item.count
+                        add = min(space, remaining)
+                        slot.item.count += add
+                        remaining -= add
+                        print(f"Added {add} to existing stack, new count: {slot.item.count}, remaining: {remaining}")
+                        if remaining <= 0:
+                            print("All items stacked successfully")
+                            return True
+            
+            # If there are still items left, try to put in empty slot
+            if remaining > 0:
+                # Create a new item with the remaining count
+                new_item = item.clone()
+                new_item.count = remaining
+                
+                for slot in self.inv_slots:
+                    if slot.item is None:
+                        slot.item = new_item
+                        print(f"Placed remaining {remaining} items in empty slot")
                         return True
-        # Find empty slot for remainder
-        for slot in self._slots:
-            if slot.item is None:
-                slot.item = item
-                return True
+                print("No space for remaining items!")
+                return False
+            return True
+        
+        # For non-stackable items
+        else:
+            for slot in self.inv_slots:
+                if slot.item is None:
+                    slot.item = item.clone()
+                    return True
         return False
 
     def remove_item(self, item_type, count=1):

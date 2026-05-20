@@ -7,7 +7,7 @@ import assets
 from level.world import WALL
 from entities.turret import PlayerBullet, DamageNumber
 from ui.health import BodyHealth
-from ui.inventory import InventoryUI, ChestUI
+import ui.inventoryui
 from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
@@ -67,14 +67,14 @@ class Player:
         self.head_angle = 0.0 #head will smoothly rotate towards this angle
         
         self.body      = BodyHealth()
-        self.inventory = InventoryUI()
+        self.inventory = ui.inventoryui.InventoryUI()
         #спавн з бінтіками
         from inventory import make_bandage, make_medkit
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_medkit())
         
-        self.chest_ui  = ChestUI()
+        self.chest_ui  = ui.inventoryui.ChestUI()
 
         self.weapon        = "pistol"
         self.ammo          = self.MAG_SIZE
