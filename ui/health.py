@@ -40,7 +40,7 @@ C_MID    = (220, 180,  30)
 C_LOW    = (220,  60,  40)
 C_BLEED  = (200,  30,  30)
 # C_FRAC   = (180, 160, 100)  # fractured — unused
-C_BANDAGE_GLOW = (180, 220, 255, 80)   # highlight when dragging bandage over a bar
+C_MEDS_GLOW = (180, 220, 255, 80)   # highlight when dragging medicine item over a bar
 
 FONT_CACHE: dict = {}
 
@@ -130,8 +130,8 @@ class BodyHealth:
         # self.tired  = False   # unused
         self._panel_open = False
 
-        # Bandage drag state
-        self._dragging_bandage = False
+        # Medicine item drag state
+        self._dragging_meds = False
         self._drag_pos         = (0, 0)
         self._drag_item        = None   # Item reference from inventory
         self._drag_src_slot    = None   # Slot reference to remove from
@@ -221,11 +221,11 @@ class BodyHealth:
     def toggle_panel(self):
         self._panel_open = not self._panel_open
 
-    # ── bandage drag-drop (called from player with inventory reference) ── #
+    # ── meds drag-drop (called from player with inventory reference) ── #
 
     def handle_event(self, event, inventory_ui):
         """
-        Call this each frame to support dragging a bandage from the inventory
+        Call this each frame to support dragging a medicine item from the inventory
         onto a limb bar in the health panel. Pass the InventoryUI instance.
         Only active when the health panel is open.
         """
@@ -235,33 +235,55 @@ class BodyHealth:
         mx, my = pygame.mouse.get_pos()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # Check if user clicked on a bandage in inventory
+            # Check if user clicked on medicine item in inventory
             if inventory_ui.open:
                 for slot in inventory_ui.inv_slots:
                     if (slot.item and slot.item.item_type == "bandage"
                             and slot.rect.collidepoint(mx, my)):
-                        self._dragging_bandage = True
+                        self._dragging_meds= True
+                        self._drag_item        = slot.item
+                        self._drag_src_slot    = slot
+                        slot.item = None          # lift from slot
+                        break
+                    elif (slot.item and slot.item.item_type == "medkit"
+                            and slot.rect.collidepoint(mx, my)):
+                        self._dragging_meds = True
                         self._drag_item        = slot.item
                         self._drag_src_slot    = slot
                         slot.item = None          # lift from slot
                         break
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self._dragging_bandage:
+            if self._dragging_meds:
                 dropped = False
-                for part_name, bar_rect in self._bar_rects.items():
-                    if bar_rect.collidepoint(mx, my):
-                        part = self.parts[part_name]
-                        part.bleeding = False
-                        part.heal(25)             # bandage also heals a little
-                        # consume one bandage
-                        self._drag_item.count -= 1
-                        if self._drag_item.count <= 0:
-                            self._drag_src_slot.item = None
-                        else:
-                            self._drag_src_slot.item = self._drag_item
-                        dropped = True
-                        break
+                if self._drag_item.item_type == "bandage":
+                    for part_name, bar_rect in self._bar_rects.items():
+                        if bar_rect.collidepoint(mx, my):
+                            part = self.parts[part_name]
+                            part.bleeding = False
+                            part.heal(25)             # bandage also heals a little
+                            # consume one bandage
+                            self._drag_item.count -= 1
+                            if self._drag_item.count <= 0:
+                                self._drag_src_slot.item = None
+                            else:
+                                self._drag_src_slot.item = self._drag_item
+                            dropped = True
+                            break
+                elif self._drag_item.item_type == "medkit":
+                    for part_name, bar_rect in self._bar_rects.items():
+                        if bar_rect.collidepoint(mx, my):
+                            part = self.parts[part_name]
+                            #part.bleeding  = False
+                            part.heal(80)             # medkit heals a lot
+                            # consume one medkit
+                            self._drag_item.count -= 1
+                            if self._drag_item.count <= 0:
+                                self._drag_src_slot.item = None
+                            else:
+                                self._drag_src_slot.item = self._drag_item
+                            dropped = True
+                            break
                 if not dropped:
                     # return item to slot
                     if self._drag_src_slot.item is None:
@@ -272,12 +294,12 @@ class BodyHealth:
                             if slot.item is None:
                                 slot.item = self._drag_item
                                 break
-                self._dragging_bandage = False
+                self._dragging_meds = False
                 self._drag_item        = None
                 self._drag_src_slot    = None
 
         elif event.type == pygame.MOUSEMOTION:
-            if self._dragging_bandage:
+            if self._dragging_meds:
                 self._drag_pos = (mx, my)
 
     # ── draw ───────────────────────────────────────────────────────────── #
@@ -287,8 +309,8 @@ class BodyHealth:
         self._draw_moodles(screen)
         if self._panel_open:
             self._draw_full_panel(screen)
-        # Draw dragged bandage ghost on top of everything
-        if self._dragging_bandage and self._drag_item:
+        # Draw dragged medicine item ghost on top of everything
+        if self._dragging_meds and self._drag_item:
             self._draw_drag_ghost(screen)
 
     def _draw_compact(self, screen):
@@ -378,10 +400,10 @@ class BodyHealth:
             bar_rect = pygame.Rect(ex, ey + 24, bw, bh)
             self._bar_rects[name] = bar_rect
 
-            # Glow if dragging bandage over this bar
-            if self._dragging_bandage and bar_rect.collidepoint(mx, my):
+            # Glow if dragging medicine item over this bar
+            if self._dragging_meds and bar_rect.collidepoint(mx, my):
                 glow_surf = pygame.Surface((bw + 8, bh + 8), pygame.SRCALPHA)
-                glow_surf.fill(C_BANDAGE_GLOW)
+                glow_surf.fill(C_MEDS_GLOW)
                 screen.blit(glow_surf, (bar_rect.x - 4, bar_rect.y - 4))
 
             pygame.draw.rect(screen, (50, 0, 0), bar_rect)

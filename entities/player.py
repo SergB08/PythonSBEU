@@ -17,9 +17,9 @@ _BULLET_TEX = None
 
 
 # Player body part rotation speeds in degrees per second
-BODY_ROT_SPEED = 1000
+BODY_ROT_SPEED = 800
 LEG_ROT_SPEED  = 500
-HEAD_ROT_SPEED = BODY_ROT_SPEED#1000
+HEAD_ROT_SPEED = 750
 
 
 # ── Crosshair ────────────────────────────────────────────────────────────────
@@ -69,9 +69,10 @@ class Player:
         self.body      = BodyHealth()
         self.inventory = InventoryUI()
         #спавн з бінтіками
-        from inventory import make_bandage
+        from inventory import make_bandage, make_medkit
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
+        self.inventory.add_item(make_medkit())
         
         self.chest_ui  = ChestUI()
 
@@ -218,7 +219,7 @@ class Player:
                 mx, my = pygame.mouse.get_pos()
                 dx2 =  mx - settings.WIDTH  // 2
                 dy2 =  my - settings.HEIGHT // 2
-                shoot_angle = math.degrees(math.atan2(-dy2, dx2)) - 90
+                shoot_angle = self.angle-90#math.degrees(math.atan2(-dy2, dx2)) - 90
                 rad = math.radians(shoot_angle)
                 offset_x = -math.sin(rad) * 70   # forward offset
                 offset_y = -math.cos(rad) * 70
