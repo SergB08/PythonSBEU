@@ -97,5 +97,8 @@ def load_item_sprites():
     medkit = pygame.image.load("textures/items/medkit.png").convert_alpha()
     bandage = pygame.image.load("textures/items/bandage.png").convert_alpha()
     ammoBoxSmall = pygame.image.load("textures/items/ammoBoxSmall.png").convert_alpha()
-
     return medkit, bandage, ammoBoxSmall
+
+def load_lootBox_texture():
+    box = pygame.image.load("textures/lootBox.png").convert_alpha()
+    return box

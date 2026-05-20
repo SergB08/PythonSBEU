@@ -10,7 +10,7 @@ ICON_SIZE = 48
 class LootItem:
     """
     A pickupable item lying on the floor.
-    Drawn as an icon. Picked up when player walks near and presses E.
+    Drawn as an image. Picked up when player walks near and presses E.
     """
 
     def __init__(self, world_x, world_y, item):
@@ -25,7 +25,6 @@ class LootItem:
         return math.hypot(px - self.world_x, py - self.world_y) < PICKUP_RANGE
 
     def update(self, dt):
-        # Removed bob animation - nothing to update now
         pass
 
     def draw(self, screen, camera_x, camera_y):
@@ -39,10 +38,7 @@ class LootItem:
         if sy < -ICON_SIZE or sy > settings.HEIGHT + ICON_SIZE:
             return
 
-        # No glow circle - just draw the icon
-        
         # Icon with random rotation
-        r = pygame.Rect(sx - ICON_SIZE // 2, sy - ICON_SIZE // 2, ICON_SIZE, ICON_SIZE)
         if self.item.image:
             img = pygame.transform.scale(self.item.image, (ICON_SIZE, ICON_SIZE))
             # Apply random rotation
@@ -58,8 +54,3 @@ class LootItem:
             rotated_surf = pygame.transform.rotate(surf, self.rotation)
             rect = rotated_surf.get_rect(center=(sx, sy))
             screen.blit(rotated_surf, rect.topleft)
-
-        # Name label (no changes here)
-        # font = pygame.font.SysFont(None, 20, bold=True)
-        # lbl = font.render(self.item.name, True, (240, 240, 240))
-        # screen.blit(lbl, (sx - lbl.get_width() // 2, sy + ICON_SIZE // 2 + 4))

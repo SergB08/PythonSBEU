@@ -1,6 +1,7 @@
 import pygame
 import settings
 import random
+import inventory  # Import the unified inventory
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  BASE ROOM
@@ -40,7 +41,6 @@ class Prop:
             self._font = pygame.font.SysFont(None, 22, bold=True)
         sx = int(self.world_x - camera_x) - self.w // 2
         sy = int(self.world_y - camera_y) - self.h // 2
-        # TODO: replace with sprite blit when texture ready
         pygame.draw.rect(screen, self.color,
                          pygame.Rect(sx, sy, self.w, self.h), border_radius=6)
         pygame.draw.rect(screen, (200, 200, 200),
@@ -73,7 +73,6 @@ class Portal(Prop):
             pygame.draw.circle(surf, (*col, a), (r + 2, r + 2), r, 3)
             screen.blit(surf, (sx - r - 2, sy - r - 2))
         # core
-        # TODO: replace with: screen.blit(portal_sprite, ...)
         pygame.draw.circle(screen, PORTAL_COLOR2, (sx, sy), 22)
         pygame.draw.circle(screen, (255, 180, 255), (sx, sy), 10)
         if self._font is None:
@@ -115,24 +114,51 @@ class Bed(Prop):
 
 
 class Chest(Prop):
-    """One-time loot chest."""
+    """One-time loot chest with separate 3x3 inventory."""
     def __init__(self, world_x, world_y):
         super().__init__(world_x, world_y, 70, 50, CHEST_COLOR, "CHEST")
         self.opened = False
-        self._loot  = self._roll()
+        self._container = None
+        self._setup_loot()
 
-    def _roll(self):
-        from inventory import make_medkit, make_ammo_pistol
-        items = [make_medkit(), make_ammo_pistol(random.randint(10, 30))]
-        return items
+    def _setup_loot(self):
+        """Create the chest's inventory container and fill with random loot."""
+        from inventory import ChestContainer, make_medkit, make_ammo_pistol
+        
+        self._container = inventory.ChestContainer()
+        
+        # Fill with random loot
+        items_to_add = []
+        if random.random() < 0.5:
+            items_to_add.append(make_medkit())
+        ammo_count = random.randint(10, 30)
+        items_to_add.append(make_ammo_pistol(ammo_count))
+        # Maybe add extra ammo sometimes
+        if random.random() < 0.3:
+            items_to_add.append(make_ammo_pistol(random.randint(5, 15)))
+        
+        for item in items_to_add:
+            self._container.add_item(item)
 
-    def open(self):
+    def open(self, player_inv):
+        """Open the chest, showing its inventory and linking to player inventory."""
         if self.opened:
             return []
         self.opened = True
-        self.color  = (80, 60, 20)
-        self.label  = "EMPTY"
-        return self._loot
+        self.color = (80, 60, 20)
+        self.label = "EMPTY"
+        
+        # Open the chest UI with player inventory reference
+        self._container.open_chest(player_inv)
+        return []  # Items are handled through the UI
+
+    def is_open(self):
+        """Check if chest UI is currently open."""
+        return self._container and self._container.open
+
+    def update(self):
+        """Update chest UI state."""
+        pass
 
     def draw(self, screen, camera_x, camera_y):
         super().draw(screen, camera_x, camera_y)
@@ -143,6 +169,12 @@ class Chest(Prop):
             pygame.draw.rect(screen, (200, 180, 50),
                              pygame.Rect(sx - 6, sy - 18, 12, 10), border_radius=2)
             pygame.draw.circle(screen, (200, 180, 50), (sx, sy - 22), 5, 2)
+    
+    def handle_events(self, events):
+        """Forward events to chest container if open."""
+        if self._container and self._container.open:
+            for e in events:
+                self._container.handle_event(e)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -184,7 +216,6 @@ class BaseRoom:
             pygame.Rect(ROOM_W - border, 0, border, ROOM_H),
         ]:
             pygame.draw.rect(surf, WALL_COLOR, side)
-        # TODO: replace with tiled floor/wall textures
         return surf
 
     def run(self, screen, dt, events, player):
@@ -205,7 +236,11 @@ class BaseRoom:
 
         # ── update props ────────────────────────────────────────── #
         self.portal.update(dt)
-        self.bed.update(dt, player.body_health)
+        self.bed.update(dt, player.body)
+        self.chest.update()
+
+        # Handle chest events
+        self.chest.handle_events(events)
 
         # ── draw props ──────────────────────────────────────────── #
         self.portal.draw(screen, camera_x, camera_y)
@@ -215,13 +250,13 @@ class BaseRoom:
         # ── player draw ─────────────────────────────────────────── #
         keys = pygame.key.get_pressed()
         player.draw(screen, keys)
-        player.body_health.draw_hud(screen)
+        player.body.draw_hud(screen)  # Make sure this method exists or use player.draw_hud
 
         # ── interaction prompts & actions ───────────────────────── #
         prompt = None
         near_portal = self.portal.near(px, py)
         near_bed    = self.bed.near(px, py)
-        near_chest  = self.chest.near(px, py)
+        near_chest  = self.chest.near(px, py) and not self.chest.opened
 
         if near_portal:
             prompt = "[E] Enter Dungeon"
@@ -237,9 +272,7 @@ class BaseRoom:
                 elif near_bed:
                     self.bed.start_sleep()
                 elif near_chest:
-                    loot = self.chest.open()
-                    for item in loot:
-                        player.inventory.add_item(item)
+                    self.chest.open(player.inventory)
 
         if prompt:
             txt = self._prompt_font.render(prompt, True, (255, 230, 100))

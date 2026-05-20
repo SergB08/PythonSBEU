@@ -7,7 +7,7 @@ import assets
 from level.world import WALL
 from entities.turret import PlayerBullet, DamageNumber
 from ui.health import BodyHealth
-import ui.inventoryui
+import inventory  # Changed from ui.inventoryui
 from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
@@ -63,18 +63,19 @@ class Player:
         self.angle         = 0.0
         self.leg_angle     = 0.0
         self.rotation_speed = rotation_speed
-        self._target_angle = 0.0 #body will smoothly rotate towards this angle
-        self.head_angle = 0.0 #head will smoothly rotate towards this angle
+        self._target_angle = 0.0
+        self.head_angle = 0.0
         
         self.body      = BodyHealth()
-        self.inventory = ui.inventoryui.InventoryUI()
-        #спавн з бінтіками
+        self.inventory = inventory.PlayerInventory()  # Changed to new inventory
+        
+        # Start with bandages and medkit
         from inventory import make_bandage, make_medkit
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_medkit())
         
-        self.chest_ui  = ui.inventoryui.ChestUI()
+        self.chest_ui  = inventory.ChestContainer()  # Changed to new chest container
 
         self.weapon        = "pistol"
         self.ammo          = self.MAG_SIZE
@@ -142,8 +143,16 @@ class Player:
 
     def start_reload(self):
         if not self._reloading and self.ammo < self.MAG_SIZE:
-            self._reloading    = True
-            self._reload_timer = self.RELOAD_TIME
+            needed = self.MAG_SIZE - self.ammo
+            got = self.inventory.remove_item("ammo_pistol", needed)
+            if got > 0:
+                self._reloading    = True
+                self._reload_timer = self.RELOAD_TIME
+                self._pending_ammo = got
+
+    def finish_reload(self):
+        self.ammo = min(self.MAG_SIZE, self.ammo + self._pending_ammo)
+        self._pending_ammo = 0
 
     # ── update ───────────────────────────────────────────────────────────── #
 
@@ -179,7 +188,7 @@ class Player:
         if keys[pygame.K_w]: dy -= 1; moving = True
         if keys[pygame.K_s]: dy += 1; moving = True
 
-        # per-click shoot flag (set true only on the frame the button is pressed)
+        # per-click shoot flag
         _shoot_pressed = False
         if events:
             for e in events:
@@ -196,16 +205,15 @@ class Player:
         if not self.collides(world, new_x, self.world_y): self.world_x = new_x
         if not self.collides(world, self.world_x, new_y): self.world_y = new_y
 
-        #self.angle = self._get_angle_to_mouse()
         self._target_angle = self._get_angle_to_mouse()
-    
+        
         if self._reloading:
             self._reload_timer -= dt
             if self._reload_timer <= 0:
-                self.ammo       = self.MAG_SIZE
+                self.finish_reload()
                 self._reloading = False
 
-        # pistol: single shot per click; swap to mouse_buttons[0] for autofire weapons
+        # pistol: single shot per click
         shoot_input = _shoot_pressed if self.weapon == "pistol" else mouse_buttons[0]
 
         self._shoot_timer -= dt
@@ -219,9 +227,9 @@ class Player:
                 mx, my = pygame.mouse.get_pos()
                 dx2 =  mx - settings.WIDTH  // 2
                 dy2 =  my - settings.HEIGHT // 2
-                shoot_angle = self.angle-90#math.degrees(math.atan2(-dy2, dx2)) - 90
+                shoot_angle = self.angle-90
                 rad = math.radians(shoot_angle)
-                offset_x = -math.sin(rad) * 70   # forward offset
+                offset_x = -math.sin(rad) * 70
                 offset_y = -math.cos(rad) * 70
                 self.bullets.append(PlayerBullet(self.world_x + offset_x, self.world_y + offset_y, shoot_angle))
                 self.ammo -= 1
@@ -236,6 +244,13 @@ class Player:
                 if settings.AUTO_RELOAD_ON_EMPTY:
                     self.start_reload()
 
+        # Reload timer update for finishing
+        if self._reloading:
+            self._reload_timer -= dt
+            if self._reload_timer <= 0:
+                self.finish_reload()
+                self._reloading = False
+
         for b in self.bullets: b.update(dt, world)
         self.bullets = [b for b in self.bullets if b.alive]
 
@@ -247,8 +262,6 @@ class Player:
 
     # ── draw ─────────────────────────────────────────────────────────────── #
     def draw(self, screen, keys, dt=0.016):
-        #print(dt)
-
         moving = any(keys[k] for k in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s])
 
         cx = settings.WIDTH  // 2
@@ -278,7 +291,6 @@ class Player:
         body_img = self.playerBodyPistol if self.weapon == "pistol" else self.playerBody
         rotated_body = pygame.transform.rotate(body_img, self.angle)
         rect_body    = rotated_body.get_rect(center=(cx, cy))
-        # Body angle interpolation
         diff = (self._target_angle - self.angle + 180) % 360 - 180
         step = BODY_ROT_SPEED * dt
         if abs(diff) <= step:
@@ -288,8 +300,6 @@ class Player:
         screen.blit(rotated_body, rect_body.topleft)
 
         # Head
-        rotated_head = pygame.transform.rotate(self.playerHead, self.angle)
-         # Head angle interpolation
         diff = (self._target_angle - self.head_angle + 180) % 360 - 180
         step = HEAD_ROT_SPEED * dt
         if abs(diff) <= step:
@@ -302,19 +312,6 @@ class Player:
 
         for mf in self.muzzle_flashes:
             mf.draw_screen(screen, self.world_x, self.world_y)
-
-       #self._draw_body_hp(screen, rect_body)
-
-    # def _draw_body_hp(self, screen, sprite_rect):
-    #     bar_w, bar_h = 60, 6
-    #     bx = sprite_rect.centerx - bar_w // 2
-    #     by = sprite_rect.top - 12
-    #     ratio = max(0.0, self.body.overall_ratio)
-    #     col = ((int(255 * (1 - ratio)), int(210 * ratio), 0))
-    #     pygame.draw.rect(screen, (60, 0, 0), (bx, by, bar_w, bar_h))
-    #     if ratio > 0:
-    #         pygame.draw.rect(screen, col, (bx, by, int(bar_w * ratio), bar_h))
-    #     pygame.draw.rect(screen, (180, 180, 180), (bx, by, bar_w, bar_h), 1)
 
     def draw_bullets(self, screen, camera_x, camera_y):
         for b in self.bullets:

@@ -133,7 +133,7 @@ def generate_rooms(world):
     # Each room gets loot slots proportional to its area.
     # room_index 0 = spawn room (no loot there)
        # ── Loot spawns ──────────────────────────────────────────────────────
-    from inventory import make_medkit, make_bandage, make_ammo_pistol
+    from ui.inventoryui import make_medkit, make_bandage, make_ammo_pistol
     from entities.loot_item import LootItem
     import random as _r
 
