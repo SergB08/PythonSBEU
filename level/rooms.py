@@ -116,6 +116,15 @@ def generate_rooms(world):
     for i, (cx, cy) in enumerate(centers):
         if i == 0:
             continue
-        turret_spawn_tiles.append((cx, cy))
+        rw, rh = room_sizes.get(room_positions[i], (1, 1))
+        room_area = rw * rh
+        if room_area == 1:
+            count = 1
+        elif room_area == 2:
+            count = random.randint(1, 2)
+        else:  # 2x2
+            count = random.randint(2, 3)
+        for _ in range(count):
+            turret_spawn_tiles.append((cx, cy))
 
     world.turret_spawns = turret_spawn_tiles

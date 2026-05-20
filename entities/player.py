@@ -12,6 +12,10 @@ from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
 
+from assets import load_bullet_texture
+_BULLET_TEX = None
+
+
 # Player body part rotation speeds in degrees per second
 BODY_ROT_SPEED = 1000
 LEG_ROT_SPEED  = 500

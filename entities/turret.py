@@ -5,6 +5,9 @@ import math
 import settings
 import assets
 from entities.muzzle_flash import MuzzleFlash
+from assets import load_bullet_texture
+_BULLET_TEX = None
+
 
 pygame.mixer.init()
 
@@ -54,26 +57,11 @@ def _angle_to_velocity(angle_deg, speed):
 #  Bullet drawing helper
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _draw_bullet(surface, sx, sy, vx, vy, length, width, body_col, rim_col):
-    spd = math.hypot(vx, vy)
-    if spd < 1:
-        pygame.draw.circle(surface, body_col, (sx, sy), width)
-        return
-    nx, ny = vx / spd, vy / spd
-    px, py = -ny, nx
-
-    hw = width / 2
-    tail = (sx - nx * length * 0.35, sy - ny * length * 0.35)
-    tip  = (sx + nx * length * 0.65, sy + ny * length * 0.65)
-
-    c1 = (tail[0] + px * hw,       tail[1] + py * hw)
-    c2 = (tail[0] - px * hw,       tail[1] - py * hw)
-    c3 = (tip[0]  - px * hw * 0.2, tip[1]  - py * hw * 0.2)
-    c4 = (tip[0]  + px * hw * 0.2, tip[1]  + py * hw * 0.2)
-
-    pygame.draw.polygon(surface, body_col, [c1, c2, c3, c4])
-    pygame.draw.line(surface, rim_col,
-                     (int(c1[0]), int(c1[1])), (int(c4[0]), int(c4[1])), 1)
+def _get_bullet_tex():
+    global _BULLET_TEX
+    if _BULLET_TEX is None:
+        _BULLET_TEX = load_bullet_texture()
+    return _BULLET_TEX
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -84,8 +72,8 @@ class Bullet:
     SPEED    = 7500
     DAMAGE   = 10
     LIFETIME = 3
-    LENGTH   = 25
-    WIDTH    = 6
+    LENGTH   = 32
+    WIDTH    = 32
 
     def __init__(self, x, y, angle_deg):
         self.x  = float(x)
@@ -115,27 +103,30 @@ class Bullet:
     def draw(self, screen, camera_x, camera_y):
         sx = int(self.x - camera_x)
         sy = int(self.y - camera_y)
-        _draw_bullet(screen, sx, sy, self.vx, self.vy,
-                     self.LENGTH, self.WIDTH,
-                     (210, 140, 30), (255, 220, 100))
+        tex = _get_bullet_tex()
+        scaled = pygame.transform.scale(tex, (self.LENGTH, self.WIDTH))
+        angle = math.degrees(math.atan2(-self.vy, self.vx))
+        rotated = pygame.transform.rotate(scaled, angle)
+        screen.blit(rotated, rotated.get_rect(center=(sx, sy)).topleft)
 
 
 class PlayerBullet(Bullet):
     """Player bullet — steel look."""
 
     SPEED    = 2000
-    DAMAGE   = 5
+    DAMAGE   = 25#5
     LIFETIME = 1.5
-    LENGTH   = 16
-    WIDTH    = 4
+    LENGTH   = 32
+    WIDTH    = 32
 
     def draw(self, screen, camera_x, camera_y):
         sx = int(self.x - camera_x)
         sy = int(self.y - camera_y)
-        _draw_bullet(screen, sx, sy, self.vx, self.vy,
-                     self.LENGTH, self.WIDTH,
-                     (170, 210, 235), (225, 245, 255))
-
+        tex = _get_bullet_tex()
+        scaled = pygame.transform.scale(tex, (self.LENGTH, self.WIDTH))
+        angle = math.degrees(math.atan2(-self.vy, self.vx))
+        rotated = pygame.transform.rotate(scaled, angle)
+        screen.blit(rotated, rotated.get_rect(center=(sx, sy)).topleft)
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -300,8 +291,9 @@ class Turret:
                 sy < -margin or sy > settings.HEIGHT + margin):
             return
 
-        legs_rect = self.legs_img.get_rect(center=(sx, sy))
-        screen.blit(self.legs_img, legs_rect.topleft)
+        rotated_legs = pygame.transform.rotate(self.legs_img, self._idle_angle + self.TURRET_SPRITE_OFFSET)
+        legs_rect = rotated_legs.get_rect(center=(sx, sy))
+        screen.blit(rotated_legs, legs_rect.topleft)
 
         if self.state == "firing":
             fi  = int(self._angry_frame) % len(self.head_angry)

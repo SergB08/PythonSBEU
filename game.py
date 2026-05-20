@@ -91,46 +91,55 @@ def init_game(floor_tiles):
 
     legs, head_idle, head_angry, head_cautious = load_turret_sprites()
     w.turrets = []
-    for tx, ty in w.turret_spawns:
-        cx = tx * settings.TILE_SIZE
-        cy = ty * settings.TILE_SIZE
+    for i, (tx, ty) in enumerate(w.turret_spawns):
+        # tx, ty are room centers in tile coords
+        # pick a random floor tile within that room's bounds
+        room_pos = list(w.rooms)[i] if i < len(w.rooms) else None
 
-        offset    = settings.TILE_SIZE * random.randint(2, 4)
-        angle_pos = random.uniform(0, 360)
-        rad       = math.radians(angle_pos)
-        spawn_x   = cx + math.cos(rad) * offset
-        spawn_y   = cy - math.sin(rad) * offset
+        # random offset within the room interior (avoid walls near edge)
+        margin = 0  # tiles from room edge
+        half = settings.ROOM_SIZE // 2 - margin
 
-        spawn_x, spawn_y = _find_nearest_floor(w, spawn_x, spawn_y)
+        for _ in range(50):  # try up to 50 times
+            ox = random.randint(-half, half)
+            oy = random.randint(-half, half)
+            candidate_tx = tx + ox
+            candidate_ty = ty + oy
+            if (0 <= candidate_ty < len(w.tiles) and
+                    0 <= candidate_tx < len(w.tiles[0]) and
+                    w.tiles[candidate_ty][candidate_tx] == FLOOR):
+                spawn_x = candidate_tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                spawn_y = candidate_ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                break
+        else:
+            # fallback: use center
+            spawn_x = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+            spawn_y = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
 
-        toward_center = math.degrees(math.atan2(-(cy - spawn_y), cx - spawn_x)) - 90
-        deviation     = random.uniform(-30, 30)
+        # rotate toward room center + deviation
+        cx = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+        cy = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
+        dx = cx - spawn_x
+        dy = cy - spawn_y
+        if abs(dx) < 1 and abs(dy) < 1:
+            toward_center = random.uniform(0, 360)
+        else:
+            toward_center = math.degrees(math.atan2(dy, dx)) + 180
+        deviation = random.uniform(-15, 15)
         initial_angle = toward_center + deviation
+        #print(initial_angle)
+        
 
         w.turrets.append(Turret(
             spawn_x, spawn_y,
             legs, head_idle, head_cautious, head_angry,
             initial_angle=initial_angle
-        ))
+    ))
 
     return w, player
 
 
 from level.world import FLOOR
-
-
-def _find_nearest_floor(w, wx, wy):
-    ts = settings.TILE_SIZE
-    tx = int(wx // ts)
-    ty = int(wy // ts)
-    for r in range(0, 10):
-        for dy in range(-r, r + 1):
-            for dx in range(-r, r + 1):
-                nx, ny = tx + dx, ty + dy
-                if 0 <= ny < len(w.tiles) and 0 <= nx < len(w.tiles[0]):
-                    if w.tiles[ny][nx] == FLOOR:
-                        return nx * ts + ts // 2, ny * ts + ts // 2
-    return wx, wy
 
 
 def init_safe_room(floor_tiles, existing_player=None):
@@ -334,11 +343,14 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
             for bullet in player.bullets:
                 if bullet.alive:
-                    dx = bullet.x - turret.world_x
-                    dy = bullet.y - turret.world_y
-                    if abs(dx) < 60 and abs(dy) < 60:
-                        turret.take_damage(bullet.DAMAGE, camera_x, camera_y)
-                        bullet.alive = False
+                    for turret in world.turrets:
+                        if not turret.alive:
+                            continue
+                        dx = bullet.x - turret.world_x
+                        dy = bullet.y - turret.world_y
+                        if abs(dx) < 60 and abs(dy) < 60:
+                            turret.take_damage(bullet.DAMAGE, camera_x, camera_y)
+                            bullet.alive = False
     else:
         # Player dead — draw turrets frozen, no updates
         for turret in world.turrets:

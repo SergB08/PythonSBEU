@@ -87,3 +87,7 @@ def load_muzzleFlash():
     muzzleFlash3 = pygame.image.load("textures/shot3.png").convert_alpha()
     
     return muzzleFlash1, muzzleFlash2, muzzleFlash3
+
+def load_bullet_texture():
+    img = pygame.image.load("textures/bulletSmall.png").convert_alpha()
+    return img
