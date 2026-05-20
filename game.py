@@ -5,12 +5,15 @@ import settings
 import controls
 from entities.player import Player, draw_crosshair
 from entities.turret import Turret
+from entities.loot_item import LootItem
+from loot_box import LootBox
 from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
 from assets import load_player_sprites2, load_turret_sprites
 from level.safe_room import SafeRoom
 import random, math
 from death_screen import DeathScreen
+from level.world import FLOOR
 
 _death_screen = None   # lazy singleton
 
@@ -127,19 +130,47 @@ def init_game(floor_tiles):
             toward_center = math.degrees(math.atan2(dy, dx)) + 180
         deviation = random.uniform(-15, 15)
         initial_angle = toward_center + deviation
-        #print(initial_angle)
-        
 
         w.turrets.append(Turret(
             spawn_x, spawn_y,
             legs, head_idle, head_cautious, head_angry,
             initial_angle=initial_angle
     ))
+    
+    # Initialize loot lists if they don't exist
+    if not hasattr(w, 'loot_items'):
+        w.loot_items = []
+    if not hasattr(w, 'loot_boxes'):
+        w.loot_boxes = []
+    
+    # ── Spawn loot boxes ──────────────────────────────────────────────
+    # For each room (except first), spawn some loot boxes
+    for i, (cx, cy) in enumerate(w.rooms):
+        if i == 0:  # Skip spawn room
+            continue
+        
+        box_count = random.choice([0, 0, 1, 1, 2])  # 0,0,1,1,2 distribution
+        
+        margin = 3
+        half = settings.ROOM_SIZE // 2 - margin
+        
+        placed = 0
+        attempts = 0
+        while placed < box_count and attempts < 30:
+            attempts += 1
+            ox = random.randint(-half, half)
+            oy = random.randint(-half, half)
+            tx = cx + ox
+            ty = cy + oy
+            
+            if (0 <= ty < len(w.tiles) and 0 <= tx < len(w.tiles[0]) 
+                    and w.tiles[ty][tx] == FLOOR):
+                world_x = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                world_y = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                w.loot_boxes.append(LootBox(world_x, world_y))
+                placed += 1
 
     return w, player
-
-
-from level.world import FLOOR
 
 
 def init_safe_room(floor_tiles, existing_player=None):
@@ -245,6 +276,12 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
     keys          = pygame.key.get_pressed()
     mouse_buttons = pygame.mouse.get_pressed()
 
+    # Initialize loot lists if they don't exist
+    if not hasattr(world, 'loot_items'):
+        world.loot_items = []
+    if not hasattr(world, 'loot_boxes'):
+        world.loot_boxes = []
+
     # ── Split events: consume ESC for pause toggle ────────────────────── #
     esc_pressed     = False
     filtered_events = []
@@ -312,6 +349,22 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
     draw_world(screen, world, floor_tiles, wall_tiles, ladder_img, camera_x, camera_y)
     draw_minimap(screen, world, player)
+    
+    # Update and draw loot items
+    if player.alive:
+        for loot in world.loot_items:
+            loot.update(dt)
+        for box in world.loot_boxes:
+            box.update(dt)
+    
+    # Draw loot items (after world, before player)
+    for loot in world.loot_items:
+        loot.draw(screen, camera_x, camera_y)
+    
+    # Draw loot boxes
+    for box in world.loot_boxes:
+        box.draw(screen, camera_x, camera_y)
+    
     player.draw(screen, keys, dt)
     player.draw_bullets(screen, camera_x, camera_y)
 
@@ -351,6 +404,38 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                         if abs(dx) < 60 and abs(dy) < 60:
                             turret.take_damage(bullet.DAMAGE, camera_x, camera_y)
                             bullet.alive = False
+        
+        # Check loot pickup
+        for loot in world.loot_items[:]:  # iterate over copy
+            if loot.near(player.world_x, player.world_y):
+                # Show pickup prompt
+                pickup_font = pygame.font.SysFont(None, 30, bold=True)
+                text = pickup_font.render("[E] Pick up " + loot.item.name, True, (255, 230, 100))
+                screen.blit(text, (settings.WIDTH // 2 - text.get_width() // 2,
+                                settings.HEIGHT // 2 - 80))
+                
+                # Check for E key press
+                for e in filtered_events:
+                    if e.type == pygame.KEYDOWN and e.key == controls.INTERACT_KEY:
+                        player.inventory.add_item(loot.item)
+                        loot.alive = False
+                        break
+        world.loot_items = [l for l in world.loot_items if l.alive]
+        
+        # Check melee hit on loot boxes
+        if mouse_buttons[0]:  # Left click for melee
+            for box in world.loot_boxes[:]:
+                if box.alive:
+                    dx = box.world_x - player.world_x
+                    dy = box.world_y - player.world_y
+                    if abs(dx) < 80 and abs(dy) < 80:
+                        loot_items = box.hit(1)
+                        for item in loot_items:
+                            world.loot_items.append(
+                                LootItem(box.world_x, box.world_y, item)
+                            )
+        world.loot_boxes = [b for b in world.loot_boxes if b.alive]
+    
     else:
         # Player dead — draw turrets frozen, no updates
         for turret in world.turrets:

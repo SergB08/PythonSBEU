@@ -22,3 +22,4 @@ class World:
         self.turret_spawns = []
         self.turrets = []
         self.loot_boxes = []
+        self.loot_items = []

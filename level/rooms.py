@@ -1,9 +1,9 @@
 import random
 import settings
 from level.world import FLOOR
+from entities.loot_item import LootItem
 
 ROOM_SIZE = settings.ROOM_SIZE
-
 
 def create_room(world, grid_x, grid_y, w=1, h=1):
     start_x = grid_x * ROOM_SIZE + 1
@@ -128,3 +128,70 @@ def generate_rooms(world):
             turret_spawn_tiles.append((cx, cy))
 
     world.turret_spawns = turret_spawn_tiles
+
+    # ── Loot spawns ──────────────────────────────────────────────────────
+    # Each room gets loot slots proportional to its area.
+    # room_index 0 = spawn room (no loot there)
+       # ── Loot spawns ──────────────────────────────────────────────────────
+    from inventory import make_medkit, make_bandage, make_ammo_pistol
+    from entities.loot_item import LootItem
+    import random as _r
+
+    LOOT_TABLE = [
+        (make_medkit,                    0.20),
+        (make_bandage,                   0.35),
+        (lambda: make_ammo_pistol(10),   0.55),
+    ]
+
+    world.loot_items = []   # List of LootItem objects
+
+    for i, (cx, cy) in enumerate(centers):
+        if i == 0:
+            continue
+
+        rw, rh = room_sizes.get(room_positions[i], (1, 1))
+        room_area   = rw * rh
+        max_items   = {1: 2, 2: 3, 4: 5}.get(room_area, 2)
+
+        half_w = (ROOM_SIZE * rw) // 2 - 2
+        half_h = (ROOM_SIZE * rh) // 2 - 2
+
+        placed = 0
+        attempts = 0
+        used_positions = set()
+
+        while placed < max_items and attempts < 60:
+            attempts += 1
+
+            ox = _r.randint(-half_w, half_w)
+            oy = _r.randint(-half_h, half_h)
+            tx = cx + ox
+            ty = cy + oy
+
+            if (tx, ty) in used_positions:
+                continue
+            if not (0 <= ty < len(world.tiles) and 0 <= tx < len(world.tiles[0])):
+                continue
+            if world.tiles[ty][tx] != FLOOR:
+                continue
+
+            roll = _r.random()
+            cumulative = 0.0
+            chosen_factory = None
+            for factory, chance in LOOT_TABLE:
+                cumulative += chance
+                if roll < cumulative:
+                    chosen_factory = factory
+                    break
+
+            if chosen_factory is None:
+                placed += 1
+                used_positions.add((tx, ty))
+                continue
+
+            used_positions.add((tx, ty))
+            # Create actual LootItem at world coordinates
+            world_x = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+            world_y = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
+            world.loot_items.append(LootItem(world_x, world_y, chosen_factory()))
+            placed += 1

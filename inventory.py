@@ -1,6 +1,8 @@
 import pygame
 import settings
 import random
+import assets
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ITEM DEFINITIONS
@@ -15,7 +17,6 @@ class Item:
         self.stackable  = stackable
         self.max_stack  = max_stack
         self.count      = 1
-        # TODO: replace self.image with pygame.image.load(...) when textures ready
         self.image      = None        # placeholder; drawn as colored rect if None
 
     def clone(self):
@@ -23,28 +24,89 @@ class Item:
         c.count = self.count
         c.image = self.image
         return c
+    
+    def draw_in_slot(self, screen, rect, alpha=255):
+        """Draw the item inside an inventory slot."""
+        if alpha < 255:
+            # Create a temporary surface with alpha
+            temp_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+            if self.image:
+                padding = 8
+                img_w = rect.width - padding * 2
+                img_h = rect.height - padding * 2
+                img = pygame.transform.scale(self.image, (img_w, img_h))
+                temp_surf.blit(img, (padding, padding))
+            else:
+                inner = pygame.Rect(8, 8, rect.width - 16, rect.height - 16)
+                pygame.draw.rect(temp_surf, self.color, inner, border_radius=4)
+            
+            if self.stackable and self.count > 1:
+                font = pygame.font.SysFont(None, 18, bold=True)
+                cnt = font.render(str(self.count), True, (255, 255, 255))
+                temp_surf.blit(cnt, (rect.width - cnt.get_width() - 4,
+                                    rect.height - cnt.get_height() - 4))
+            
+            temp_surf.set_alpha(alpha)
+            screen.blit(temp_surf, rect.topleft)
+        else:
+            # Normal drawing (no alpha)
+            if self.image:
+                padding = 8
+                img_w = rect.width - padding * 2
+                img_h = rect.height - padding * 2
+                img = pygame.transform.scale(self.image, (img_w, img_h))
+                screen.blit(img, (rect.x + padding, rect.y + padding))
+            else:
+                inner = pygame.Rect(rect.x + 8, rect.y + 8,
+                                    rect.width - 16, rect.height - 16)
+                pygame.draw.rect(screen, self.color, inner, border_radius=4)
+            
+            if self.stackable and self.count > 1:
+                font = pygame.font.SysFont(None, 18, bold=True)
+                cnt = font.render(str(self.count), True, (255, 255, 255))
+                screen.blit(cnt, (rect.right - cnt.get_width() - 4,
+                                rect.bottom - cnt.get_height() - 4))
+
+
+# ── Item textures cache ────────────────────────────────────────────────────── #
+_MEDKIT_TEX = None
+_BANDAGE_TEX = None
+_AMMO_TEX = None
+
+
+def _ensure_item_textures():
+    """Lazily loads and unpacks item textures from assets if not already done."""
+    global _MEDKIT_TEX, _BANDAGE_TEX, _AMMO_TEX
+    if _MEDKIT_TEX is None:
+        _MEDKIT_TEX, _BANDAGE_TEX, _AMMO_TEX = assets.load_item_sprites()
 
 
 # ── Item factories ────────────────────────────────────────────────────────── #
 
 def make_medkit():
-    # TODO: load "textures/items/medkit.png" here
+    _ensure_item_textures()
     item = Item("Medkit", "medkit", color=(220, 60, 60), stackable=True, max_stack=5)
+    item.image = _MEDKIT_TEX
+    return item
+
+def make_bandage():
+    _ensure_item_textures()
+    item = Item("Bandage", "bandage", color=(230, 230, 230), stackable=True, max_stack=5)
+    item.image = _BANDAGE_TEX
     return item
 
 def make_ammo_pistol(count=10):
-    # TODO: load "textures/items/ammo_pistol.png" here
+    _ensure_item_textures()
     item = Item("Pistol Ammo", "ammo_pistol", color=(210, 170, 40), stackable=True, max_stack=60)
     item.count = count
+    item.image = _AMMO_TEX
     return item
 
 def make_pistol():
-    # TODO: load "textures/items/pistol.png" here
     item = Item("Pistol", "gun_pistol", color=(80, 80, 180))
     return item
 
 def make_melee():
-    # TODO: load "textures/items/knife.png" here
     item = Item("Knife", "melee", color=(160, 160, 160))
     return item
 
@@ -56,11 +118,12 @@ def make_melee():
 SLOT_SIZE = 64
 SLOT_PAD  = 6
 
+
 class Slot:
     def __init__(self, x, y, label=""):
         self.rect  = pygame.Rect(x, y, SLOT_SIZE, SLOT_SIZE)
         self.item  = None
-        self.label = label   # e.g. "1", "2", "M"
+        self.label = label
         self._font_small = None
         self._font_count = None
 
@@ -72,7 +135,6 @@ class Slot:
     def draw(self, screen, highlight=False):
         self._fonts()
         border_col = (255, 200, 50) if highlight else (140, 140, 140)
-        bg_col     = (30, 30, 40, 200)
 
         bg = pygame.Surface((SLOT_SIZE, SLOT_SIZE), pygame.SRCALPHA)
         bg.fill((30, 30, 40, 200))
@@ -80,20 +142,8 @@ class Slot:
         pygame.draw.rect(screen, border_col, self.rect, 2, border_radius=4)
 
         if self.item:
-            if self.item.image:
-                # TODO: blit scaled texture when image is set
-                img = pygame.transform.scale(self.item.image, (SLOT_SIZE - 12, SLOT_SIZE - 12))
-                screen.blit(img, (self.rect.x + 6, self.rect.y + 6))
-            else:
-                # placeholder colored rectangle
-                inner = pygame.Rect(self.rect.x + 8, self.rect.y + 8,
-                                    SLOT_SIZE - 16, SLOT_SIZE - 16)
-                pygame.draw.rect(screen, self.item.color, inner, border_radius=4)
-
-            if self.item.stackable and self.item.count > 1:
-                cnt = self._font_count.render(str(self.item.count), True, (255, 255, 255))
-                screen.blit(cnt, (self.rect.right  - cnt.get_width()  - 4,
-                                  self.rect.bottom - cnt.get_height() - 4))
+            # Use the item's draw_in_slot method
+            self.item.draw_in_slot(screen, self.rect)
 
         if self.label:
             lbl = self._font_small.render(self.label, True, (180, 180, 180))
@@ -107,6 +157,7 @@ class Slot:
 INV_COLS = 4
 INV_ROWS = 5
 
+
 class Inventory:
     def __init__(self):
         self.open    = False
@@ -117,7 +168,7 @@ class Inventory:
     def _rebuild(self):
         self._slots = []
         ox = 30
-        oy = 60  # below health bar area
+        oy = 60
         for row in range(INV_ROWS):
             for col in range(INV_COLS):
                 x = ox + col * (SLOT_SIZE + SLOT_PAD)
@@ -127,7 +178,6 @@ class Inventory:
     def toggle(self):
         self.open = not self.open
 
-    # Returns True if item was added
     def add_item(self, item):
         # Try stacking first
         if item.stackable:
@@ -145,10 +195,9 @@ class Inventory:
             if slot.item is None:
                 slot.item = item
                 return True
-        return False  # inventory full
+        return False
 
     def remove_item(self, item_type, count=1):
-        """Remove items by type, returns how many were removed."""
         removed = 0
         for slot in self._slots:
             if slot.item and slot.item.item_type == item_type:
@@ -174,10 +223,9 @@ class Inventory:
         if self._font is None:
             self._font = pygame.font.SysFont(None, 28, bold=True)
 
-        # Background panel
-        pad   = 12
-        pw    = INV_COLS * (SLOT_SIZE + SLOT_PAD) + pad * 2
-        ph    = INV_ROWS * (SLOT_SIZE + SLOT_PAD) + pad * 2 + 32
+        pad = 12
+        pw = INV_COLS * (SLOT_SIZE + SLOT_PAD) + pad * 2
+        ph = INV_ROWS * (SLOT_SIZE + SLOT_PAD) + pad * 2 + 32
         panel = pygame.Surface((pw, ph), pygame.SRCALPHA)
         panel.fill((15, 15, 25, 210))
         screen.blit(panel, (30 - pad, 48))
@@ -197,28 +245,27 @@ class Inventory:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  HOTBAR  (bottom-center: slot 1 = pistol, slot 2 = melee, slot M = fists)
+#  HOTBAR  (bottom-center: slot 1 = pistol, slot 2 = melee)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Hotbar:
-    SLOTS = ["1", "2"]          # labels
+    SLOTS = ["1", "2"]
     KEYS  = [pygame.K_1, pygame.K_2]
 
     def __init__(self):
-        self.selected = 0       # 0 = pistol slot, 1 = melee slot
+        self.selected = 0
         self.slots    = []
         self._font    = None
         self._rebuild()
-        # Default loadout
         self.slots[0].item = make_pistol()
         self.slots[1].item = make_melee()
 
     def _rebuild(self):
         self.slots = []
-        n   = len(self.SLOTS)
-        w   = n * (SLOT_SIZE + SLOT_PAD) - SLOT_PAD
-        ox  = settings.WIDTH  // 2 - w // 2
-        oy  = settings.HEIGHT - SLOT_SIZE - 16
+        n = len(self.SLOTS)
+        w = n * (SLOT_SIZE + SLOT_PAD) - SLOT_PAD
+        ox = settings.WIDTH // 2 - w // 2
+        oy = settings.HEIGHT - SLOT_SIZE - 16
         for i, lbl in enumerate(self.SLOTS):
             self.slots.append(Slot(ox + i * (SLOT_SIZE + SLOT_PAD), oy, lbl))
 
@@ -237,7 +284,6 @@ class Hotbar:
             self._font = pygame.font.SysFont(None, 20, bold=True)
         for i, slot in enumerate(self.slots):
             slot.draw(screen, highlight=(i == self.selected))
-            # keybind hint below
             hint = self._font.render(self.SLOTS[i], True, (160, 160, 160))
             screen.blit(hint, (slot.rect.centerx - hint.get_width() // 2,
                                 slot.rect.bottom + 2))
