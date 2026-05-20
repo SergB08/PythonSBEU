@@ -265,7 +265,10 @@ class Turret:
                 self._fire_timer = self.FIRE_COOLDOWN
 
     def _shoot(self):
-        self.bullets.append(Bullet(self.world_x, self.world_y, self.head_angle))
+        rad = math.radians(self.head_angle)
+        offset_x = -math.sin(rad) * 70   # forward offset
+        offset_y = -math.cos(rad) * 70
+        self.bullets.append(Bullet(self.world_x+offset_x, self.world_y+offset_y, self.head_angle))
         self.muzzle_flashes.append(
             MuzzleFlash(self.head_angle, self._muzzle_frames, barrel_offset=self.TURRET_MUZZLE_BARREL_OFFSET, size=64)
         )
