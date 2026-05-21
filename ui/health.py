@@ -230,6 +230,13 @@ class BodyHealth:
                         self._drag_src_slot    = slot
                         slot.item = None          # lift from slot
                         break
+                    elif (slot.item and slot.item.item_type == "ai2"
+                            and slot.rect.collidepoint(mx, my)):
+                        self._dragging_meds = True
+                        self._drag_item        = slot.item
+                        self._drag_src_slot    = slot
+                        slot.item = None          # lift from slot
+                        break
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self._dragging_meds:

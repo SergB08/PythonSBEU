@@ -153,10 +153,10 @@ def generate_rooms(world):
 
     # таблиця лута: (фабрика предмету, шанс випадіння)
     LOOT_TABLE = [
-        (make_medkit,                    0.25),
+        (make_medkit,                    0.75),
         (make_bandage,                   0.5),
-        (lambda: make_ammo_pistol(10),   0.35),
-        (make_ai2, 0.35),
+        (lambda: make_ammo_pistol(10),   0.65),
+        (make_ai2, 0.65),
     ]
 
     world.loot_items = []  # список предметів що лежать на підлозі

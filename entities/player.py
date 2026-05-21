@@ -76,6 +76,8 @@ class Player:
         self.inventory.add_item(make_medkit())
         self.inventory.add_item(make_ammo_pistol(100))
         self.inventory.add_item(make_ai2())
+        self.inventory.add_item(make_ai2())
+        self.inventory.add_item(make_ai2())
         self.chest_ui  = inventory.ChestContainer()  # Changed to new chest container
 
         self.weapon        = "pistol"
