@@ -3,13 +3,13 @@ HEIGHT = 1080
 FPS = 60
 
 PLAYER_HP = 100
-PLAYER_SPEED = 25#12.5   
+PLAYER_SPEED = 25 
 ANIMATION_SPEED = 0.15
 PLAYER_SHOOT_COOLDOWN_PISTOL = 0.120   
 
 SHOTEFFECT_SPEED = 0.05
 
-AUTO_RELOAD_ON_EMPTY = False   # False = must press R manually
+AUTO_RELOAD_ON_EMPTY = False   # авто-перезарядка якщо магазин порожній
 
 TILE_SIZE = 160
 ROOM_SIZE = 16
@@ -25,8 +25,6 @@ MINIMAP_PADDING = 200
 
 MAX_LEVELS = 2
 
-#SOUND_SHOOT = "sounds/shoot.wav"
-
-# Settings menu persistent state
+# Дефолтні налаштування для звуку та вікна
 VOLUME      = 0.5
 WINDOW_MODE = 0   # 0 = Windowed, 1 = Fullscreen, 2 = Borderless
