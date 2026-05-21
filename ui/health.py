@@ -150,7 +150,7 @@ class BodyHealth:
         mult  = PART_DAMAGE_MULT.get(part_name, 1.0)
         final = max(1.0, amount * mult)
         part.take_damage(final)
-        if final >= 8:
+        if random.random() < 0.25:
             part.bleeding = True
         self._check_death()
 

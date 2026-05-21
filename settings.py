@@ -23,6 +23,8 @@ ROOM_COUNT_MAX = 7
 MINIMAP_SCALE = 1
 MINIMAP_PADDING = 200
 
+MAX_LEVELS = 3
+
 #SOUND_SHOOT = "sounds/shoot.wav"
 
 # Settings menu persistent state

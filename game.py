@@ -363,6 +363,9 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
             if event.type == pygame.KEYDOWN:
                 if event.key == controls.INTERACT_KEY and near_ladder:
                     next_level = world.level + 1
+                    if next_level > settings.MAX_LEVELS:
+                        new_world, new_player, new_safe_room = init_safe_room(floor_tiles, existing_player=player)
+                        return "safe_room", new_world, new_player, new_safe_room
                     new_world, new_player = init_game(floor_tiles, existing_player=player)
                     new_world.level = next_level
                     return "playing", new_world, new_player, safe_room
@@ -373,6 +376,10 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
     draw_world(screen, world, floor_tiles, wall_tiles, ladder_img, camera_x, camera_y)
     draw_minimap(screen, world, player)
+    
+    font = pygame.font.SysFont(None, 36, bold=True)
+    lbl  = font.render(f"LEVEL {world.level} / {settings.MAX_LEVELS}", True, (150, 220, 255))
+    screen.blit(lbl, (settings.WIDTH // 2 - lbl.get_width() // 2, 30))
     
     # Update and draw loot items
     if player.alive:
