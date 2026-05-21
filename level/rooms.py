@@ -153,40 +153,36 @@ def generate_rooms(world):
 
     # таблиця лута: (фабрика предмету, шанс випадіння)
     LOOT_TABLE = [
-        (make_medkit,                    0.75),
-        (make_bandage,                   0.5),
-        (lambda: make_ammo_pistol(10),   0.65),
-        (make_ai2, 0.65),
+    (make_medkit,                    0.25),
+    (make_bandage,                   0.50),
+    (lambda: make_ammo_pistol(10),   0.30),
+    (make_ai2,                       0.50),
     ]
 
-    world.loot_items = []  # список предметів що лежать на підлозі
+    world.loot_items = []
 
     for i, (cx, cy) in enumerate(centers):
         if i == 0:
-            continue  # у стартовій кімнаті лута немає
+            continue
 
         rw, rh = room_sizes.get(room_positions[i], (1, 1))
         room_area = rw * rh
-        max_items = {1: 2, 2: 3, 4: 5}.get(room_area, 2)  # максимум предметів за площею
+        max_items = {1: 2, 2: 3, 4: 5}.get(room_area, 2)
 
-        # межі для випадкового розміщення всередині кімнати
         half_w = (ROOM_SIZE * rw) // 2 - 2
         half_h = (ROOM_SIZE * rh) // 2 - 2
 
         placed = 0
         attempts = 0
-        used_positions = set()  # вже зайняті позиції щоб не накладались
+        used_positions = set()
 
         while placed < max_items and attempts < 60:
             attempts += 1
-
-            # випадкове зміщення від центру кімнати
             ox = _r.randint(-half_w, half_w)
             oy = _r.randint(-half_h, half_h)
             tx = cx + ox
             ty = cy + oy
 
-            # пропускаємо зайняті або недійсні позиції
             if (tx, ty) in used_positions:
                 continue
             if not (0 <= ty < len(world.tiles) and 0 <= tx < len(world.tiles[0])):
@@ -194,24 +190,16 @@ def generate_rooms(world):
             if world.tiles[ty][tx] != FLOOR:
                 continue
 
-            # зважений випадковий вибір предмету з таблиці лута
-            roll = _r.random()
-            cumulative = 0.0
             chosen_factory = None
-            for factory, chance in LOOT_TABLE:
-                cumulative += chance
-                if roll < cumulative:
-                    chosen_factory = factory
-                    break
-
-            # якщо нічого не вибрано — пропускаємо слот
+            winners = [f for f, chance in LOOT_TABLE if _r.random() < chance]
+            if winners:
+                chosen_factory = _r.choice(winners)
+                
+            used_positions.add((tx, ty))
             if chosen_factory is None:
                 placed += 1
-                used_positions.add((tx, ty))
                 continue
 
-            used_positions.add((tx, ty))
-            # створюємо предмет у світових координатах (центр тайлу)
             world_x = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
             world_y = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
             world.loot_items.append(LootItem(world_x, world_y, chosen_factory()))
