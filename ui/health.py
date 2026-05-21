@@ -113,8 +113,7 @@ class BodyPart:
         self.hp = min(float(self.MAX_HP), self.hp + amount)
 
     def update(self, dt: float):
-        if self.bleeding and self.hp > 0:
-            self.hp = max(0.0, self.hp - 2.0 * dt)
+        pass
 
     @property
     def ratio(self):
@@ -143,7 +142,11 @@ class BodyHealth:
     def take_damage(self, amount: float, part_name: str = "Torso"):
         if not self.alive:
             return
-        part  = self.parts.get(part_name, self.parts["Torso"])
+        part = self.parts.get(part_name, self.parts["Torso"])
+        # If part is already at 0, redistribute to alive parts
+        if part.hp <= 0:
+            self.take_damage_any(amount)
+            return
         mult  = PART_DAMAGE_MULT.get(part_name, 1.0)
         final = max(1.0, amount * mult)
         part.take_damage(final)
@@ -154,7 +157,12 @@ class BodyHealth:
     def take_damage_any(self, amount: float):
         if not self.alive:
             return
-        part_name = _random_part()
+        # Only pick from parts that still have HP
+        alive_parts = [n for n, p in self.parts.items() if p.hp > 0]
+        if not alive_parts:
+            return
+        weights = [PART_HIT_WEIGHT.get(n, 0.1) for n in alive_parts]
+        part_name = random.choices(alive_parts, weights=weights, k=1)[0]
         self.take_damage(amount, part_name)
 
     def heal_part(self, part_name: str, amount: float):
@@ -214,8 +222,17 @@ class BodyHealth:
     # ── update ─────────────────────────────────────────────────────────── #
 
     def update(self, dt: float):
-        for part in self.parts.values():
-            part.update(dt)
+        for name, part in self.parts.items():
+            if part.bleeding:
+                if part.hp > 0:
+                    part.hp = max(0.0, part.hp - 2.0 * dt)
+                else:
+                    # redistribute bleed damage to alive parts
+                    alive_parts = [n for n, p in self.parts.items() if p.hp > 0]
+                    if alive_parts:
+                        weights = [PART_HIT_WEIGHT.get(n, 0.1) for n in alive_parts]
+                        target = random.choices(alive_parts, weights=weights, k=1)[0]
+                        self.parts[target].hp = max(0.0, self.parts[target].hp - 2.0 * dt)
         self._check_death()
 
     def toggle_panel(self):

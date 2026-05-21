@@ -70,11 +70,11 @@ class Player:
         self.inventory = inventory.PlayerInventory()  # Changed to new inventory
         
         # Start with bandages and medkit
-        from inventory import make_bandage, make_medkit
+        from inventory import make_bandage, make_medkit, make_ammo_pistol
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_medkit())
-        
+        self.inventory.add_item(make_ammo_pistol(100))
         self.chest_ui  = inventory.ChestContainer()  # Changed to new chest container
 
         self.weapon        = "pistol"
@@ -342,8 +342,6 @@ class Player:
         screen.blit(num, (bx + bar_w // 2 - num.get_width() // 2,
                           by + bar_h // 2 - num.get_height() // 2))
 
-        self.body.draw(screen)
-
         af = pygame.font.SysFont(None, 34, bold=True)
         wf = pygame.font.SysFont(None, 24, bold=True)
         wx = settings.WIDTH - 260
@@ -370,3 +368,4 @@ class Player:
 
         self.inventory.draw(screen)
         self.chest_ui.draw(screen)
+        self.body.draw(screen)

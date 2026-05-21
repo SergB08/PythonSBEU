@@ -54,7 +54,7 @@ class Item:
         self.image     = image       # pygame.Surface or None  # CHANGED: icon -> image
         self.stackable = stackable
         self.count     = count
-        self.max_stack = 60 if item_type == "ammo_pistol" else (5 if item_type in ("medkit", "bandage") else 1)
+        self.max_stack = 100 if item_type == "ammo_pistol" else (5 if item_type in ("medkit", "bandage") else 1)
         self.eq_slot   = eq_slot    # None or one of EQ_SLOTS strings
 
     def clone(self):

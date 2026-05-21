@@ -93,6 +93,11 @@ def load_turret_sprites():
     
     return turretLegs, turretHeadIdleAnim, turretHeadAngryAnim, turretHeadCautiousAnim
 
+#Slime sprites
+def load_slime_frames():
+    img = pygame.image.load("textures/slimeTemp.png").convert_alpha()
+    return [img, img, img]  # 3 frames, same image for now
+
 def load_muzzleFlash():
     muzzleFlash1 = pygame.image.load("textures/shot1.png").convert_alpha()
     muzzleFlash2 = pygame.image.load("textures/shot2.png").convert_alpha()

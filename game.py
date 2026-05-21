@@ -1,6 +1,7 @@
 # game.py
 import pygame
 from entities import player
+from entities.slime import Slime
 from level import world
 import settings
 import controls
@@ -10,14 +11,14 @@ from entities.loot_item import LootItem
 from loot_box import LootBox
 from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
-from assets import load_player_sprites2, load_turret_sprites, get_death_sound
+from assets import load_player_sprites2, load_turret_sprites, get_death_sound, load_slime_frames
 from level.safe_room import SafeRoom
 import random, math
 from death_screen import DeathScreen
 from level.world import FLOOR
 
 _death_screen = None   # lazy singleton
-
+_death_channel = None
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  PAUSE MENU
@@ -84,7 +85,7 @@ def _get_pause_menu() -> PauseMenu:
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-def init_game(floor_tiles):
+def init_game(floor_tiles, existing_player=None):
     playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
     w      = generate_world(len(floor_tiles))
     player = Player(playerHead, playerBody, playerBodyPistol,
@@ -137,6 +138,30 @@ def init_game(floor_tiles):
             legs, head_idle, head_cautious, head_angry,
             initial_angle=initial_angle
     ))
+    
+    slime_frames = load_slime_frames()
+    w.slimes = []
+    for i, (cx, cy) in enumerate(w.rooms):
+        if i == 0:
+            continue
+        count = random.randint(1, 2)
+        for _ in range(count):
+            for attempt in range(50):
+                ox = random.randint(-half, half)
+                oy = random.randint(-half, half)
+                tx = cx + ox
+                ty = cy + oy
+                if (0 <= ty < len(w.tiles) and 0 <= tx < len(w.tiles[0])
+                        and w.tiles[ty][tx] == FLOOR):
+                    sx = tx * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                    sy = ty * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                    slime = Slime(sx, sy, slime_frames)
+                    slime.set_room(
+                        cx * settings.TILE_SIZE + settings.TILE_SIZE // 2,
+                        cy * settings.TILE_SIZE + settings.TILE_SIZE // 2
+                    )
+                    w.slimes.append(slime)
+                    break
     
     # Initialize loot lists if they don't exist
     if not hasattr(w, 'loot_items'):
@@ -258,9 +283,8 @@ def run_safe_room(screen, dt, events, world, player, safe_room,
         return "safe_room", world, player, safe_room
 
     if result == "enter_level":
-        new_world, new_player = init_game(floor_tiles)
+        new_world, new_player = init_game(floor_tiles, existing_player=player)
         new_world.level = 1
-        new_player.hp   = player.hp
         return "playing", new_world, new_player, safe_room
 
     return "safe_room", world, player, safe_room
@@ -282,6 +306,7 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
         world.loot_items = []
     if not hasattr(world, 'loot_boxes'):
         world.loot_boxes = []
+    if not hasattr(world, 'slimes'): world.slimes = []
 
     # ── Split events: consume ESC for pause toggle ────────────────────── #
     esc_pressed     = False
@@ -336,13 +361,10 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
         for event in filtered_events:
             if event.type == pygame.KEYDOWN:
                 if event.key == controls.INTERACT_KEY and near_ladder:
-                    next_level    = world.level + 1
-                    new_world, new_player = init_game(floor_tiles)
+                    next_level = world.level + 1
+                    new_world, new_player = init_game(floor_tiles, existing_player=player)
                     new_world.level = next_level
-                    new_player.hp   = player.hp
-                    new_player.ammo = player.ammo
                     return "playing", new_world, new_player, safe_room
-
         player.update(keys, dt, world, mouse_buttons, filtered_events)
 
     camera_x = player.world_x - settings.WIDTH  // 2
@@ -382,6 +404,9 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
     if player.alive:
         # Turrets update and shoot only while player is alive
+        for slime in world.slimes:
+            slime.update(dt, player, world)
+            slime.draw(screen, camera_x, camera_y)
         for turret in world.turrets:
             turret.update(dt, player, world)
             turret.draw(screen, camera_x, camera_y)
@@ -392,10 +417,9 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                     
                     dx = bullet.x - player.world_x
                     dy = bullet.y - player.world_y
-                    if abs(dx) < 30 and abs(dy) < 30:
+                    if math.hypot(dx, dy) < 60:
                         player.body.take_damage_any(bullet.DAMAGE)
                         bullet.alive = False
-                        hit_something = True
                     
                     if not hit_something and bullet.alive:
                         for box in world.loot_boxes[:]:
@@ -426,7 +450,16 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                         bullet.alive = False
                         hit_something = True
                         break
-                
+                for slime in world.slimes:
+                    if not slime.alive:
+                        continue
+                    dx = bullet.x - slime.world_x
+                    dy = bullet.y - slime.world_y
+                    if math.hypot(dx, dy) < 50:
+                        slime.take_damage(bullet.DAMAGE, camera_x, camera_y)
+                        bullet.alive = False
+                        hit_something = True
+                        break
                 if not hit_something and bullet.alive:
                     for box in world.loot_boxes[:]:
                         if box.alive:
@@ -466,11 +499,13 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                         for item in loot_items:
                             world.loot_items.append(LootItem(box.world_x, box.world_y, item))
         world.loot_boxes = [b for b in world.loot_boxes if b.alive]
-
+    
     else:
         # Player dead — draw turrets frozen, no updates
         for turret in world.turrets:
             turret.draw(screen, camera_x, camera_y)
+        for slime in world.slimes:
+            slime.draw(screen, camera_x, camera_y)
 
     player.draw_hud(screen)
     draw_crosshair(screen)
@@ -479,15 +514,12 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
     if not player.alive:
         if _death_screen is None:
             _death_screen = DeathScreen()
-            # Play pre-loaded death sound
             sound = get_death_sound()
             if sound:
                 sound.set_volume(settings.VOLUME)
-                channel = pygame.mixer.find_channel()
-                if channel is None:
-                    channel = pygame.mixer.Channel(0)
-                    channel.stop()
-                channel.play(sound)
+                _death_channel = pygame.mixer.Channel(15)  # reserve channel 15
+                _death_channel.stop()
+                _death_channel.play(sound)
         
         result = _death_screen.run(screen, events)
         if result == "restart":
