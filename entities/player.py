@@ -353,7 +353,7 @@ class Player:
         if self.weapon == "rifle":
             rotated_body = pygame.transform.rotate(self.playerBodyRifle, self.angle)
             rad = math.radians(self.angle)
-            offset_x = math.sin(rad) * 0
+            offset_x = math.sin(rad) * 0 # leave 0 until sprite fixed and the figure out this math ig
             offset_y = math.cos(rad) * 0
             rect_body = rotated_body.get_rect(center=(cx + int(offset_x), cy + int(offset_y)))
         else:
