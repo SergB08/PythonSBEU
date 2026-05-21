@@ -8,10 +8,9 @@ ICON_SIZE = 48
 
 
 class LootItem:
-    """
-    A pickupable item lying on the floor.
-    Drawn as an image. Picked up when player walks near and presses E.
-    """
+
+    # pickupable item lying on the floor.
+    #drawn as an image. Picked up when player walks near and presses E.
 
     def __init__(self, world_x, world_y, item):
         self.world_x = float(world_x)
