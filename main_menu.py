@@ -48,7 +48,9 @@ class Menu:
         # bg_image = pygame.image.load("images/menu_bg.png").convert()
         # self.bg = pygame.transform.scale(bg_image,
         #                                  (settings.WIDTH, settings.HEIGHT))
-        self.bg_color = (20, 20, 30)   # placeholder solid color
+        #self.bg_color = (20, 20, 30)   # placeholder solid color
+        bg_image = pygame.image.load("EFTzavod.jpg").convert()
+        self.bg = pygame.transform.scale(bg_image, (settings.WIDTH, settings.HEIGHT))
 
         # ── buttons ───────────────────────────────────────────
         bw, bh = 320, 80
@@ -67,8 +69,9 @@ class Menu:
         """Returns 'play' | 'settings' | 'exit' | None."""
         # background
         # screen.blit(self.bg, (0, 0))
-        screen.fill(self.bg_color)
-
+        #screen.fill(self.bg_color)
+        screen.blit(self.bg, (0, 0))
+        
         for name, btn in self.buttons.items():
             if btn.update(events):
                 return name

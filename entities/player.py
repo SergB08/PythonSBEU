@@ -146,8 +146,11 @@ class Player:
             needed = self.MAG_SIZE - self.ammo
             got = self.inventory.remove_item("ammo_pistol", needed)
             if got > 0:
+                arm_damaged = (self.body.parts["L.Arm"].hp <= 0 or
+                               self.body.parts["R.Arm"].hp <= 0)
+                reload_time = self.RELOAD_TIME * (1.5 if arm_damaged else 1.0)
                 self._reloading    = True
-                self._reload_timer = self.RELOAD_TIME
+                self._reload_timer = reload_time
                 self._pending_ammo = got
 
     def finish_reload(self):
@@ -180,7 +183,9 @@ class Player:
                     elif e.key == pygame.K_r:
                         self.start_reload()
 
-        speed  = settings.PLAYER_SPEED * dt * 60
+        leg_damaged = (self.body.parts["L.Leg"].hp <= 0 or
+                       self.body.parts["R.Leg"].hp <= 0)
+        speed = settings.PLAYER_SPEED * dt * 60 * (0.7 if leg_damaged else 1.0)
         dx, dy = 0, 0
         moving = False
         if keys[pygame.K_a]: dx -= 1; moving = True
