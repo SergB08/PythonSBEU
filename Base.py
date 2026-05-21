@@ -7,6 +7,8 @@ import settings
 from settings_menu import SettingsMenu
 
 pygame.init()
+pygame.mixer.init(frequency=22050, size=-16, channels=16, buffer=512)
+pygame.mixer.set_num_channels(16)  # Increase from default 8 to 16
 pygame.mouse.set_visible(False)   # hide OS cursor — crosshair drawn in-game
 
 screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))

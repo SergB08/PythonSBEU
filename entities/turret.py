@@ -112,7 +112,7 @@ def _has_line_of_sight(world, x1, y1, x2, y2):
 class Bullet:
     """Turret bullet — brass look."""
 
-    SPEED    = 7500
+    SPEED    = 5000
     DAMAGE   = 10
     LIFETIME = 3
     LENGTH   = 32
@@ -156,7 +156,7 @@ class Bullet:
 class PlayerBullet(Bullet):
     """Player bullet — steel look."""
 
-    SPEED    = 2000
+    SPEED    = 5000
     DAMAGE   = 25
     LIFETIME = 1.5
     LENGTH   = 32

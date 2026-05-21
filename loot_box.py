@@ -9,8 +9,8 @@ import settings
 #  Destroyed by melee hits or bullets; drops ammo / medkits.
 # ─────────────────────────────────────────────────────────────────────────────
 
-BOX_SIZE   = 48
 BOX_HP     = 3      # melee hits to break (bullets do more damage)
+BOX_SIZE   = 128  # change this value to resize
 
 class LootBox:
     def __init__(self, world_x, world_y):
@@ -57,7 +57,8 @@ class LootBox:
     def _get_rotated_texture(self):
         """Get cached rotated texture for current rotation."""
         if self._cached_rotated is None or self._cached_angle != self.rotation:
-            self._cached_rotated = pygame.transform.rotate(self._texture, self.rotation)
+            scaled = pygame.transform.scale(self._texture, (BOX_SIZE, BOX_SIZE))
+            self._cached_rotated = pygame.transform.rotate(scaled, self.rotation)
             self._cached_angle = self.rotation
         return self._cached_rotated
 
@@ -84,5 +85,3 @@ class LootBox:
         rotated_texture = self._get_rotated_texture()
         rect = rotated_texture.get_rect(center=(sx + shake_x, sy + shake_y))
         screen.blit(rotated_texture, rect.topleft)
-
-        # No HP pips visible anymore

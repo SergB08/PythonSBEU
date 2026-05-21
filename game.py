@@ -10,7 +10,7 @@ from entities.loot_item import LootItem
 from loot_box import LootBox
 from level.generation import generate_world, generate_safe_room_world
 from level.rendering import draw_world, draw_minimap
-from assets import load_player_sprites2, load_turret_sprites
+from assets import load_player_sprites2, load_turret_sprites, get_death_sound
 from level.safe_room import SafeRoom
 import random, math
 from death_screen import DeathScreen
@@ -381,17 +381,15 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                             settings.HEIGHT // 2 - 100))
 
     if player.alive:
-    # Turrets update and shoot only while player is alive
+        # Turrets update and shoot only while player is alive
         for turret in world.turrets:
             turret.update(dt, player, world)
             turret.draw(screen, camera_x, camera_y)
 
-            # Turret bullets - check player AND loot boxes
-            for bullet in turret.bullets[:]:  # iterate over copy
+            for bullet in turret.bullets[:]:
                 if bullet.alive:
                     hit_something = False
                     
-                    # Check player hit
                     dx = bullet.x - player.world_x
                     dy = bullet.y - player.world_y
                     if abs(dx) < 30 and abs(dy) < 30:
@@ -399,7 +397,6 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                         bullet.alive = False
                         hit_something = True
                     
-                    # Check loot boxes if bullet didn't hit player
                     if not hit_something and bullet.alive:
                         for box in world.loot_boxes[:]:
                             if box.alive:
@@ -408,115 +405,68 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                                 if abs(dx) < 50 and abs(dy) < 50:
                                     loot_items = box.hit(bullet.DAMAGE)
                                     for item in loot_items:
-                                        from entities.loot_item import LootItem
                                         world.loot_items.append(
                                             LootItem(box.world_x, box.world_y, item)
                                         )
                                     bullet.alive = False
                                     break
 
-    # Player bullets - check turrets AND loot boxes
-    for bullet in player.bullets[:]:  # iterate over copy
-        if bullet.alive:
-            hit_something = False
-            
-            # Check turrets
-            for turret in world.turrets:
-                if not turret.alive:
-                    continue
-                dx = bullet.x - turret.world_x
-                dy = bullet.y - turret.world_y
-                if abs(dx) < 60 and abs(dy) < 60:
-                    turret.take_damage(bullet.DAMAGE, camera_x, camera_y)
-                    bullet.alive = False
-                    hit_something = True
-                    break
-            
-            # Check loot boxes if bullet didn't hit a turret
-            if not hit_something and bullet.alive:
-                for box in world.loot_boxes[:]:
-                    if box.alive:
-                        dx = bullet.x - box.world_x
-                        dy = bullet.y - box.world_y
-                        if abs(dx) < 50 and abs(dy) < 50:
-                            loot_items = box.hit(bullet.DAMAGE)
-                            for item in loot_items:
-                                from entities.loot_item import LootItem
-                                world.loot_items.append(
-                                    LootItem(box.world_x, box.world_y, item)
-                                )
-                            bullet.alive = False
-                            break
-    
-    # Check loot pickup
-    for loot in world.loot_items[:]:  # iterate over copy
-        if loot.near(player.world_x, player.world_y):
-            # Show pickup prompt
-            pickup_font = pygame.font.SysFont(None, 30, bold=True)
-            text = pickup_font.render("[E] Pick up " + loot.item.name, True, (255, 230, 100))
-            screen.blit(text, (settings.WIDTH // 2 - text.get_width() // 2,
-                            settings.HEIGHT // 2 - 80))
-            
-            # Check for E key press
-            for e in filtered_events:
-                if e.type == pygame.KEYDOWN and e.key == controls.INTERACT_KEY:
-                    player.inventory.add_item(loot.item)
-                    loot.alive = False
-                    break
-    
-    world.loot_items = [l for l in world.loot_items if l.alive]
-    
-    # Check melee hit on loot boxes (ONLY in melee mode, not pistol mode)
-    if mouse_buttons[0] and player.weapon == "melee":  # Only melee mode
-        for box in world.loot_boxes[:]:
-            if box.alive:
-                dx = box.world_x - player.world_x
-                dy = box.world_y - player.world_y
-                if abs(dx) < 80 and abs(dy) < 80:
-                    loot_items = box.hit(1)  # Melee does 1 damage
-                    for item in loot_items:
-                        from entities.loot_item import LootItem
-                        world.loot_items.append(
-                            LootItem(box.world_x, box.world_y, item)
-                        )
-    
-    # Remove destroyed loot boxes (Moved OUTSIDE the melee loop, properly indented)
-    world.loot_boxes = [b for b in world.loot_boxes if b.alive]
-    
-    # Check loot pickup
-    for loot in world.loot_items[:]:  # iterate over copy
-        if loot.near(player.world_x, player.world_y):
-            # Show pickup prompt
-            pickup_font = pygame.font.SysFont(None, 30, bold=True)
-            text = pickup_font.render("[E] Pick up " + loot.item.name, True, (255, 230, 100))
-            screen.blit(text, (settings.WIDTH // 2 - text.get_width() // 2,
-                            settings.HEIGHT // 2 - 80))
-            
-            # Check for E key press
-            for e in filtered_events:
-                if e.type == pygame.KEYDOWN and e.key == controls.INTERACT_KEY:
-                    player.inventory.add_item(loot.item)
-                    loot.alive = False
-                    break
-    world.loot_items = [l for l in world.loot_items if l.alive]
-    
-    # Check melee hit on loot boxes (ONLY in melee mode, not pistol mode)
-    if mouse_buttons[0] and player.weapon == "melee":  # Only melee mode
-        for box in world.loot_boxes[:]:
-            if box.alive:
-                dx = box.world_x - player.world_x
-                dy = box.world_y - player.world_y
-                if abs(dx) < 80 and abs(dy) < 80:
-                    loot_items = box.hit(1)  # Melee does 1 damage
-                    for item in loot_items:
-                        from entities.loot_item import LootItem
-                        world.loot_items.append(
-                            LootItem(box.world_x, box.world_y, item)
-                        )
-    
-    # Remove destroyed loot boxes
+        # Player bullets - check turrets AND loot boxes
+        for bullet in player.bullets[:]:
+            if bullet.alive:
+                hit_something = False
+                
+                for turret in world.turrets:
+                    if not turret.alive:
+                        continue
+                    dx = bullet.x - turret.world_x
+                    dy = bullet.y - turret.world_y
+                    if abs(dx) < 60 and abs(dy) < 60:
+                        turret.take_damage(bullet.DAMAGE, camera_x, camera_y)
+                        bullet.alive = False
+                        hit_something = True
+                        break
+                
+                if not hit_something and bullet.alive:
+                    for box in world.loot_boxes[:]:
+                        if box.alive:
+                            dx = bullet.x - box.world_x
+                            dy = bullet.y - box.world_y
+                            if abs(dx) < 50 and abs(dy) < 50:
+                                loot_items = box.hit(bullet.DAMAGE)
+                                for item in loot_items:
+                                    world.loot_items.append(
+                                        LootItem(box.world_x, box.world_y, item)
+                                    )
+                                bullet.alive = False
+                                break
+
+        # Check loot pickup
+        for loot in world.loot_items[:]:
+            if loot.near(player.world_x, player.world_y):
+                pickup_font = pygame.font.SysFont(None, 30, bold=True)
+                text = pickup_font.render("[E] Pick up " + loot.item.name, True, (255, 230, 100))
+                screen.blit(text, (settings.WIDTH // 2 - text.get_width() // 2,
+                                settings.HEIGHT // 2 - 80))
+                for e in filtered_events:
+                    if e.type == pygame.KEYDOWN and e.key == controls.INTERACT_KEY:
+                        player.inventory.add_item(loot.item)
+                        loot.alive = False
+                        break
+        world.loot_items = [l for l in world.loot_items if l.alive]
+
+        # Check melee hit on loot boxes
+        if mouse_buttons[0] and player.weapon == "melee":
+            for box in world.loot_boxes[:]:
+                if box.alive:
+                    dx = box.world_x - player.world_x
+                    dy = box.world_y - player.world_y
+                    if abs(dx) < 80 and abs(dy) < 80:
+                        loot_items = box.hit(1)
+                        for item in loot_items:
+                            world.loot_items.append(LootItem(box.world_x, box.world_y, item))
         world.loot_boxes = [b for b in world.loot_boxes if b.alive]
-    
+
     else:
         # Player dead — draw turrets frozen, no updates
         for turret in world.turrets:
@@ -529,7 +479,17 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
     if not player.alive:
         if _death_screen is None:
             _death_screen = DeathScreen()
-        result = _death_screen.run(screen, events)  # use original events here
+            # Play pre-loaded death sound
+            sound = get_death_sound()
+            if sound:
+                sound.set_volume(settings.VOLUME)
+                channel = pygame.mixer.find_channel()
+                if channel is None:
+                    channel = pygame.mixer.Channel(0)
+                    channel.stop()
+                channel.play(sound)
+        
+        result = _death_screen.run(screen, events)
         if result == "restart":
             new_world, new_player = init_game(floor_tiles)
             return "playing", new_world, new_player, safe_room

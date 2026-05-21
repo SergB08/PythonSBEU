@@ -7,6 +7,17 @@ import settings
 PlayerPistolShot = "sounds/gun/stalkerPM_shortened.ogg"
 TurretShot       = "sounds/gun/stalkerMP5_shortened.ogg"
 PlayerDeath = "sounds/player/deathsound.wav"
+# Pre-load death sound for reuse
+_death_sound = None
+
+def get_death_sound():
+    global _death_sound
+    if _death_sound is None:
+        try:
+            _death_sound = pygame.mixer.Sound(PlayerDeath)
+        except Exception:
+            pass
+    return _death_sound
 
 # ── Main game textures and icon ───────────────────────────────────────────────
 def load_assets():
