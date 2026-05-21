@@ -454,13 +454,13 @@ class PlayerInventory:
         
         if self._backpack:
             self._backpack.draw(screen, mx, my)
-        if self._equipment:
-            self._equipment.draw(screen, mx, my)
+        #if self._equipment: DISABLED FOR NOW
+            #self._equipment.draw(screen, mx, my)
         
-        # Draw equipment slots with special border
-        if self._equipment:
-            for slot in self._equipment.slots:
-                slot.draw(screen, mx, my)
+        # Draw equipment slots with special border ### DISABLED FOR NOW
+        #if self._equipment:
+        #    for slot in self._equipment.slots:
+        #        slot.draw(screen, mx, my)
         
         # Draw backpack slots
         if self._backpack:
