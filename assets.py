@@ -71,6 +71,7 @@ def load_player_sprites2():
     # тіло гравця
     playerBody       = pygame.image.load("textures/player/body/playerBody.png").convert_alpha()
     playerBodyPistol = pygame.image.load("textures/player/body/playerBodyPistol.png").convert_alpha()
+    playerBodyRifle = pygame.image.load("textures/player/body/playerBodyRifle.png").convert_alpha()
     
     # кадри анімації ніг
     playerLegsIdle   = pygame.image.load("textures/player/legs/playerLegsStatic.png").convert_alpha()
@@ -88,7 +89,7 @@ def load_player_sprites2():
         playerLegsStepR1, playerLegsStepR2, playerLegsStepR1
     ]}
     
-    return playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol
+    return playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol, playerBodyRifle
 
 
 # ── Спрайти турелі ────────────────────────────────────────────────────────────

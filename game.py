@@ -86,10 +86,10 @@ def _get_pause_menu() -> PauseMenu:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def init_game(floor_tiles, existing_player=None):
-    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
+    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol,playerBodyRifle = load_player_sprites2()
     w      = generate_world(len(floor_tiles))
     if existing_player is None:
-        player = Player(playerHead, playerBody, playerBodyPistol,
+        player = Player(playerHead, playerBody, playerBodyPistol, playerBodyRifle,
                         playerLegsIdleAnim["legsIdleAnim"],
                         playerLegsWalkAnim["legsWalkAnim"])
     else:
@@ -206,11 +206,11 @@ def init_game(floor_tiles, existing_player=None):
 
 
 def init_safe_room(floor_tiles, existing_player=None):
-    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
+    playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol, playerBodyRifle = load_player_sprites2()
     w = generate_safe_room_world(len(floor_tiles))
 
     if existing_player is None:
-        player = Player(playerHead, playerBody, playerBodyPistol,
+        player = Player(playerHead, playerBody, playerBodyPistol, playerBodyRifle,
                         playerLegsIdleAnim["legsIdleAnim"],
                         playerLegsWalkAnim["legsWalkAnim"])
     else:

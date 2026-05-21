@@ -7,7 +7,7 @@ import assets
 from level.world import WALL
 from entities.turret import PlayerBullet, DamageNumber
 from ui.health import BodyHealth
-import inventory  # Changed from ui.inventoryui
+import inventory
 from entities.muzzle_flash import MuzzleFlash
 
 pygame.mixer.init()
@@ -15,6 +15,8 @@ pygame.mixer.init()
 from assets import load_bullet_texture
 _BULLET_TEX = None
 
+RIFLE_MAG_SIZE = 30
+RIFLE_COOLDOWN = 0.08
 
 # Player body part rotation speeds in degrees per second
 BODY_ROT_SPEED = 800
@@ -45,7 +47,14 @@ class Player:
         img = pygame.transform.scale(img, (size, size))
         return img
 
-    def __init__(self, playerHead, playerBody, playerBodyPistol,
+    def _prep_rifle(self, img):
+    # 32x64 -> 192x384, centered on a 192x192 surface (96px above and below)
+        img = pygame.transform.scale(img, (192, 384))
+        surf = pygame.Surface((192, 384), pygame.SRCALPHA)
+        surf.blit(img, (0, 0))
+        return surf
+
+    def __init__(self, playerHead, playerBody, playerBodyPistol, playerBodyRifle,
                  legsIdle, legsWalkFrames, rotation_speed=500):
 
         self.world_x = 0
@@ -56,6 +65,7 @@ class Player:
         self.playerHead       = self._prep(playerHead)
         self.playerBody       = self._prep(playerBody)
         self.playerBodyPistol = self._prep(playerBodyPistol)
+        self.playerBodyRifle  = self._prep_rifle(playerBodyRifle)
         self.legsIdle         = self._prep(legsIdle)
         self.legsWalkFrames   = [self._prep(frame) for frame in legsWalkFrames]
 
@@ -67,9 +77,8 @@ class Player:
         self.head_angle = 0.0
         
         self.body      = BodyHealth()
-        self.inventory = inventory.PlayerInventory()  # Changed to new inventory
+        self.inventory = inventory.PlayerInventory()
         
-        # Start with bandages and medkit
         from inventory import make_bandage, make_medkit, make_ammo_pistol, make_ai2
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
@@ -78,13 +87,15 @@ class Player:
         self.inventory.add_item(make_ai2())
         self.inventory.add_item(make_ai2())
         self.inventory.add_item(make_ai2())
-        self.chest_ui  = inventory.ChestContainer()  # Changed to new chest container
+        self.chest_ui  = inventory.ChestContainer()
 
         self.weapon        = "pistol"
         self.ammo          = self.MAG_SIZE
+        self.rifle_ammo    = RIFLE_MAG_SIZE
         self._reloading    = False
         self._reload_timer = 0.0
         self._shoot_timer  = self.SHOOT_COOLDOWN * 3
+        self._pending_ammo = 0
 
         self.bullets        = []
         self.damage_numbers = []
@@ -145,19 +156,32 @@ class Player:
         self.body.heal_all(amount)
 
     def start_reload(self):
-        if not self._reloading and self.ammo < self.MAG_SIZE:
+        if self._reloading:
+            return
+        if self.weapon == "pistol" and self.ammo < self.MAG_SIZE:
             needed = self.MAG_SIZE - self.ammo
             got = self.inventory.remove_item("ammo_pistol", needed)
             if got > 0:
                 arm_damaged = (self.body.parts["L.Arm"].hp <= 0 or
                                self.body.parts["R.Arm"].hp <= 0)
-                reload_time = self.RELOAD_TIME * (1.5 if arm_damaged else 1.0)
                 self._reloading    = True
-                self._reload_timer = reload_time
+                self._reload_timer = self.RELOAD_TIME * (1.5 if arm_damaged else 1.0)
+                self._pending_ammo = got
+        elif self.weapon == "rifle" and self.rifle_ammo < RIFLE_MAG_SIZE:
+            needed = RIFLE_MAG_SIZE - self.rifle_ammo
+            got = self.inventory.remove_item("ammo_pistol", needed)
+            if got > 0:
+                arm_damaged = (self.body.parts["L.Arm"].hp <= 0 or
+                               self.body.parts["R.Arm"].hp <= 0)
+                self._reloading    = True
+                self._reload_timer = self.RELOAD_TIME * (3.5 if arm_damaged else 3.0)
                 self._pending_ammo = got
 
     def finish_reload(self):
-        self.ammo = min(self.MAG_SIZE, self.ammo + self._pending_ammo)
+        if self.weapon == "pistol":
+            self.ammo = min(self.MAG_SIZE, self.ammo + self._pending_ammo)
+        elif self.weapon == "rifle":
+            self.rifle_ammo = min(RIFLE_MAG_SIZE, self.rifle_ammo + self._pending_ammo)
         self._pending_ammo = 0
 
     # ── update ───────────────────────────────────────────────────────────── #
@@ -182,6 +206,8 @@ class Player:
                     elif e.key == pygame.K_1:
                         self.weapon = "pistol"
                     elif e.key == pygame.K_2:
+                        self.weapon = "rifle"
+                    elif e.key == pygame.K_3:
                         self.weapon = "melee"
                     elif e.key == pygame.K_r:
                         self.start_reload()
@@ -221,10 +247,17 @@ class Player:
                 self.finish_reload()
                 self._reloading = False
 
-        # pistol: single shot per click
-        shoot_input = _shoot_pressed if self.weapon == "pistol" else mouse_buttons[0]
+        # pistol: single shot per click; rifle: held
+        if self.weapon == "pistol":
+            shoot_input = _shoot_pressed
+        elif self.weapon == "rifle":
+            shoot_input = mouse_buttons[0]
+        else:
+            shoot_input = False
 
         self._shoot_timer -= dt
+
+        # ── Pistol ──
         if (self.weapon == "pistol"
                 and shoot_input
                 and self._shoot_timer <= 0
@@ -232,10 +265,7 @@ class Player:
                 and not self.inventory.open
                 and not self.chest_ui.open):
             if self.ammo > 0:
-                mx, my = pygame.mouse.get_pos()
-                dx2 =  mx - settings.WIDTH  // 2
-                dy2 =  my - settings.HEIGHT // 2
-                shoot_angle = self.angle-90
+                shoot_angle = self.angle - 90
                 rad = math.radians(shoot_angle)
                 offset_x = -math.sin(rad) * 70
                 offset_y = -math.cos(rad) * 70
@@ -243,8 +273,7 @@ class Player:
                 self.ammo -= 1
                 self._shoot_timer = self.SHOOT_COOLDOWN
                 self.muzzle_flashes.append(
-                    MuzzleFlash(shoot_angle, self._muzzle_frames,
-                                barrel_offset=128, size=64)
+                    MuzzleFlash(shoot_angle, self._muzzle_frames, barrel_offset=128, size=64)
                 )
                 Player.SHOOT_SOUND.set_volume(settings.VOLUME)
                 Player.SHOOT_SOUND.play()
@@ -252,12 +281,29 @@ class Player:
                 if settings.AUTO_RELOAD_ON_EMPTY:
                     self.start_reload()
 
-        # Reload timer update for finishing
-        if self._reloading:
-            self._reload_timer -= dt
-            if self._reload_timer <= 0:
-                self.finish_reload()
-                self._reloading = False
+        # ── Rifle ──
+        if (self.weapon == "rifle"
+                and shoot_input
+                and self._shoot_timer <= 0
+                and not self._reloading
+                and not self.inventory.open
+                and not self.chest_ui.open):
+            if self.rifle_ammo > 0:
+                shoot_angle = self.angle - 90
+                rad = math.radians(shoot_angle)
+                offset_x = -math.sin(rad) * 70
+                offset_y = -math.cos(rad) * 70
+                self.bullets.append(PlayerBullet(self.world_x + offset_x, self.world_y + offset_y, shoot_angle))
+                self.rifle_ammo -= 1
+                self._shoot_timer = RIFLE_COOLDOWN
+                self.muzzle_flashes.append(
+                    MuzzleFlash(shoot_angle, self._muzzle_frames, barrel_offset=128, size=64)
+                )
+                Player.SHOOT_SOUND.set_volume(settings.VOLUME)
+                Player.SHOOT_SOUND.play()
+            else:
+                if settings.AUTO_RELOAD_ON_EMPTY:
+                    self.start_reload()
 
         for b in self.bullets: b.update(dt, world)
         self.bullets = [b for b in self.bullets if b.alive]
@@ -295,16 +341,26 @@ class Player:
         rotated_legs = pygame.transform.rotate(legs_img, self.leg_angle)
         screen.blit(rotated_legs, rotated_legs.get_rect(center=(cx, cy)).topleft)
 
-        # Body
-        body_img = self.playerBodyPistol if self.weapon == "pistol" else self.playerBody
-        rotated_body = pygame.transform.rotate(body_img, self.angle)
-        rect_body    = rotated_body.get_rect(center=(cx, cy))
+        # Body angle update
         diff = (self._target_angle - self.angle + 180) % 360 - 180
         step = BODY_ROT_SPEED * dt
         if abs(diff) <= step:
             self.angle = self._target_angle
         else:
-            self.angle += math.copysign(step, diff)        
+            self.angle += math.copysign(step, diff)
+
+        # Body
+        if self.weapon == "rifle":
+            rotated_body = pygame.transform.rotate(self.playerBodyRifle, self.angle)
+            rad = math.radians(self.angle)
+            offset_x = math.sin(rad) * 0
+            offset_y = math.cos(rad) * 0
+            rect_body = rotated_body.get_rect(center=(cx + int(offset_x), cy + int(offset_y)))
+        else:
+            body_img = self.playerBodyPistol if self.weapon == "pistol" else self.playerBody
+            rotated_body = pygame.transform.rotate(body_img, self.angle)
+            rect_body = rotated_body.get_rect(center=(cx, cy))
+
         screen.blit(rotated_body, rect_body.topleft)
 
         # Head
@@ -354,9 +410,9 @@ class Player:
         wf = pygame.font.SysFont(None, 24, bold=True)
         wx = settings.WIDTH - 260
         wy = settings.HEIGHT - 70
-        wlbl = wf.render(f"{'PISTOL' if self.weapon == 'pistol' else 'MELEE'}   "
-                         f"[1] Pistol  [2] Melee", True, (180, 180, 180))
+        wlbl = wf.render("[1] Pistol  [2] Rifle  [3] Melee", True, (180, 180, 180))
         screen.blit(wlbl, (wx, wy))
+
         if self.weapon == "pistol":
             if self._reloading:
                 pct  = 1.0 - self._reload_timer / self.RELOAD_TIME
@@ -364,6 +420,16 @@ class Player:
                 screen.blit(rtxt, (wx, wy + 24))
             else:
                 atxt = af.render(f"{self.ammo} / {self.MAG_SIZE}   [R] Reload",
+                                 True, (255, 255, 255))
+                screen.blit(atxt, (wx, wy + 24))
+
+        elif self.weapon == "rifle":
+            if self._reloading:
+                pct  = 1.0 - self._reload_timer / 2.5
+                rtxt = af.render(f"Reloading {int(pct * 100)}%", True, (255, 200, 50))
+                screen.blit(rtxt, (wx, wy + 24))
+            else:
+                atxt = af.render(f"{self.rifle_ammo} / {RIFLE_MAG_SIZE}   [R] Reload",
                                  True, (255, 255, 255))
                 screen.blit(atxt, (wx, wy + 24))
 
