@@ -28,13 +28,17 @@ class LootBox:
 
     def _roll_loot(self):
         # випадково визначає вміст ящика
-        from inventory import make_medkit, make_ammo_pistol
+        from inventory import make_medkit, make_ammo_pistol, make_ai2, make_bandage
         drops = []
-        if random.random() < 0.5:
+        if random.random() < 0.25:
             drops.append(make_medkit())
         ammo_count = random.randint(5, 20)
-        if random.random() < 0.8:
+        if random.random() < 0.3:
             drops.append(make_ammo_pistol(ammo_count))
+        if random.random() < 0.50:
+            drops.append(make_ai2())
+        if random.random() < 0.50:
+            drops.append(make_bandage())
         return drops
 
     def hit(self, damage=1):

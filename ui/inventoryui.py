@@ -40,20 +40,19 @@ def _font(size: int, bold: bool = False):
 #Item
 class Item:
     def __init__(self, name: str, item_type: str = "misc", color=(120, 180, 120), 
-                 image=None, stackable=False, count=1, eq_slot=None):
+                 image=None, stackable=False, count=1):#, eq_slot=None):
         self.name      = name       # display name
         self.item_type = item_type  # "medkit" | "bandage" | "ammo_pistol" | "ai2" | "gun_pistol" | "melee" | "misc"
         self.color     = color      # fallback color if no image
         self.image     = image      # pygame.Surface icon or None
         self.stackable = stackable  # whether multiple can share a slot
         self.count     = count      # current stack size
-        self.max_stack = 100 if item_type == "ammo_pistol" else (5 if item_type in ("medkit", "bandage")) else(2 if item_type in "ai2") else 1
-        self.eq_slot   = eq_slot    # which equipment slot this item fits, or None
+        self.max_stack = 100 if item_type == "ammo_pistol" else 5 if item_type in ("medkit", "bandage") else 2 if item_type == "ai2" else 1
 
     def clone(self):
         """Returns a copy of this item."""
         new = Item(self.name, self.item_type, self.color, self.image, 
-                   self.stackable, self.count, self.eq_slot)
+                   self.stackable, self.count)#, self.eq_slot)
         new.max_stack = self.max_stack
         return new
 
@@ -96,8 +95,8 @@ def make_medkit():
     return Item("Medkit", "medkit", color=(220, 60, 60), image=_MEDKIT_TEX, stackable=False, count=1)
 
 def make_ai2():
-    _ensure_item_textures
-    return Item("Small Medkit", "ai2", color=(220, 60, 60), image=_MEDKIT_TEX, stackable=True, count=1)
+    _ensure_item_textures()
+    return Item("Small Medkit", "ai2", color=(220, 60, 60), image=AI2_TEX, stackable=True, count=1)
 
 def make_bandage():
     _ensure_item_textures()

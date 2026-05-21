@@ -239,7 +239,7 @@ class BodyHealth:
                         if bar_rect.collidepoint(mx, my):
                             part = self.parts[part_name]
                             part.bleeding = False
-                            part.heal(25)             # bandage also heals a little
+                            part.heal(10)             # bandage also heals a little
                             # consume one bandage
                             self._drag_item.count -= 1
                             if self._drag_item.count <= 0:
@@ -252,9 +252,20 @@ class BodyHealth:
                     for part_name, bar_rect in self._bar_rects.items():
                         if bar_rect.collidepoint(mx, my):
                             part = self.parts[part_name]
-                            #part.bleeding  = False
-                            part.heal(80)
+                            part.bleeding  = False
+                            part.heal(75)
                             # consume one medkit
+                            self._drag_item.count -= 1
+                            if self._drag_item.count <= 0:
+                                self._drag_src_slot.item = None
+                            else:
+                                self._drag_src_slot.item = self._drag_item
+                            dropped = True
+                            break
+                elif self._drag_item.item_type == "ai2":
+                    for part_name, bar_rect in self._bar_rects.items():
+                        if bar_rect.collidepoint(mx, my):
+                            self.parts[part_name].heal(25)
                             self._drag_item.count -= 1
                             if self._drag_item.count <= 0:
                                 self._drag_src_slot.item = None

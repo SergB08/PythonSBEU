@@ -70,11 +70,12 @@ class Player:
         self.inventory = inventory.PlayerInventory()  # Changed to new inventory
         
         # Start with bandages and medkit
-        from inventory import make_bandage, make_medkit, make_ammo_pistol
+        from inventory import make_bandage, make_medkit, make_ammo_pistol, make_ai2
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_bandage())
         self.inventory.add_item(make_medkit())
         self.inventory.add_item(make_ammo_pistol(100))
+        self.inventory.add_item(make_ai2())
         self.chest_ui  = inventory.ChestContainer()  # Changed to new chest container
 
         self.weapon        = "pistol"

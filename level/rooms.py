@@ -147,15 +147,16 @@ def generate_rooms(world):
 
     # Спавн лута
     # кожна кімната (крім стартової) отримує предмети пропорційно до площі
-    from ui.inventoryui import make_medkit, make_bandage, make_ammo_pistol
+    from ui.inventoryui import make_medkit, make_bandage, make_ammo_pistol, make_ai2
     from entities.loot_item import LootItem
     import random as _r
 
     # таблиця лута: (фабрика предмету, шанс випадіння)
     LOOT_TABLE = [
         (make_medkit,                    0.25),
-        (make_bandage,                   0.25),
-        (lambda: make_ammo_pistol(10),   0.75),
+        (make_bandage,                   0.5),
+        (lambda: make_ammo_pistol(10),   0.35),
+        (make_ai2, 0.35),
     ]
 
     world.loot_items = []  # список предметів що лежать на підлозі
