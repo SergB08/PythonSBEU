@@ -26,7 +26,6 @@ class MuzzleFlash:
             self.alive = False
  
     def draw(self, screen, camera_x, camera_y, world_x, world_y):
-        """World-space draw (turret) — pass the turret's current world pos."""
         if not self.alive:
             return
         rad = math.radians(self.angle)
@@ -38,7 +37,6 @@ class MuzzleFlash:
         screen.blit(surf, surf.get_rect(center=(sx, sy)).topleft)
  
     def draw_screen(self, screen, world_x, world_y):
-        """Screen-space draw (player) — pass the player's current world pos."""
         if not self.alive:
             return
         rad = math.radians(self.angle)

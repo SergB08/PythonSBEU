@@ -25,11 +25,6 @@ def generate_world(floor_count, level=1):
 
 
 def generate_safe_room_world(floor_count):
-    """
-    Creates a single large room with no turrets and no ladder.
-    Uses the same tile system as normal levels so the same
-    floor/wall textures render identically.
-    """
     import settings
 
     world = World()

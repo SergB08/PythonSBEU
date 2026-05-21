@@ -1,36 +1,8 @@
-"""
-ui/health.py
-
-Project Zomboid-style health system.
-
-Body parts: Head, Torso, L.Arm, R.Arm, L.Leg, R.Leg
-Each part has hp (0-100), bleeding, fractured.
-
-Hit-chance weights (must sum to 1.0):
-  Torso  35%   <- biggest target
-  L.Leg  15%
-  R.Leg  15%
-  L.Arm  12%
-  R.Arm  12%
-  Head   11%   <- hard to hit
-
-Damage multipliers per part:
-  Head   2.0x  <- dangerous but not instant-kill
-  Torso  1.0x
-  L.Arm  0.7x
-  R.Arm  0.7x
-  L.Leg  0.8x
-  R.Leg  0.8x
-
-Death: Head HP <= 0  OR  Torso HP <= 0
-Every hit is guaranteed to deal at least 1 damage.
-"""
-
 import random
 import pygame
 import settings
 
-# ── palette ────────────────────────────────────────────────────────────────
+# палітра
 C_BG     = (28,  28,  28,  210)
 C_BORDER = (90,  90, 100, 255)
 C_TEXT   = (220, 220, 220)
@@ -39,7 +11,7 @@ C_FULL   = (60,  200,  60)
 C_MID    = (220, 180,  30)
 C_LOW    = (220,  60,  40)
 C_BLEED  = (200,  30,  30)
-# C_FRAC   = (180, 160, 100)  # fractured — unused
+# C_FRAC   = (180, 160, 100)  # fracture (unused for now)
 C_MEDS_GLOW = (180, 220, 255, 80)   # highlight when dragging medicine item over a bar
 
 FONT_CACHE: dict = {}
@@ -60,7 +32,7 @@ def _hp_color(ratio):
     return C_LOW
 
 
-# ── Hit-chance weights ─────────────────────────────────────────────────────
+# hit chances
 PART_HIT_WEIGHT = {
     "Torso": 0.35,
     "L.Leg": 0.15,
@@ -70,7 +42,7 @@ PART_HIT_WEIGHT = {
     "Head":  0.11,
 }
 
-# ── Damage multipliers per part ────────────────────────────────────────────
+# dmg multipliers
 PART_DAMAGE_MULT = {
     "Head":  2.0,
     "Torso": 1.0,
@@ -92,7 +64,7 @@ def _random_part() -> str:
     return random.choices(parts, weights=weights, k=1)[0]
 
 
-# ── Body part ──────────────────────────────────────────────────────────────
+# limbs
 class BodyPart:
     MAX_HP = 100
 
@@ -120,13 +92,12 @@ class BodyPart:
         return self.hp / self.MAX_HP
 
 
-# ── Full health model ──────────────────────────────────────────────────────
 class BodyHealth:
     def __init__(self):
         self.parts: dict[str, BodyPart] = {n: BodyPart(n) for n in PART_NAMES}
         self.alive = True
-        # self.sick   = False   # unused
-        # self.tired  = False   # unused
+        # self.sick   = False   # unused effect
+        # self.tired  = False   # unused effect
         self._panel_open = False
 
         # Medicine item drag state
@@ -134,10 +105,10 @@ class BodyHealth:
         self._drag_pos         = (0, 0)
         self._drag_item        = None   # Item reference from inventory
         self._drag_src_slot    = None   # Slot reference to remove from
-        # Cached bar rects for hit-testing (populated in _draw_full_panel)
+        # Cached bar rectangless for hit-testing (populated in _draw_full_panel)
         self._bar_rects: dict[str, pygame.Rect] = {}
 
-    # ── damage ─────────────────────────────────────────────────────────── #
+    # damage and healing application
 
     def take_damage(self, amount: float, part_name: str = "Torso"):
         if not self.alive:
@@ -191,8 +162,6 @@ class BodyHealth:
                 self.alive = False
                 return
 
-    # ── totals ─────────────────────────────────────────────────────────── #
-
     @property
     def total_hp(self):
         return sum(p.hp for p in self.parts.values())
@@ -205,8 +174,6 @@ class BodyHealth:
     def overall_ratio(self):
         return self.total_hp / self.max_total_hp
 
-    # ── moodle helpers ─────────────────────────────────────────────────── #
-
     @property
     def in_pain(self):
         return any(p.hp < 70 for p in self.parts.values())
@@ -218,8 +185,6 @@ class BodyHealth:
     @property
     def bleeding(self):
         return any(p.bleeding for p in self.parts.values())
-
-    # ── update ─────────────────────────────────────────────────────────── #
 
     def update(self, dt: float):
         for name, part in self.parts.items():
@@ -238,14 +203,10 @@ class BodyHealth:
     def toggle_panel(self):
         self._panel_open = not self._panel_open
 
-    # ── meds drag-drop (called from player with inventory reference) ── #
+    # meds drag-drop (called from player with inventory reference)#
 
     def handle_event(self, event, inventory_ui):
-        """
-        Call this each frame to support dragging a medicine item from the inventory
-        onto a limb bar in the health panel. Pass the InventoryUI instance.
-        Only active when the health panel is open.
-        """
+
         if not self._panel_open:
             return
 
@@ -292,7 +253,7 @@ class BodyHealth:
                         if bar_rect.collidepoint(mx, my):
                             part = self.parts[part_name]
                             #part.bleeding  = False
-                            part.heal(80)             # medkit heals a lot
+                            part.heal(80)
                             # consume one medkit
                             self._drag_item.count -= 1
                             if self._drag_item.count <= 0:
@@ -306,7 +267,7 @@ class BodyHealth:
                     if self._drag_src_slot.item is None:
                         self._drag_src_slot.item = self._drag_item
                     else:
-                        # slot was taken in the meantime — find another
+                        # slot was taken - find another
                         for slot in inventory_ui.inv_slots:
                             if slot.item is None:
                                 slot.item = self._drag_item
@@ -319,7 +280,7 @@ class BodyHealth:
             if self._dragging_meds:
                 self._drag_pos = (mx, my)
 
-    # ── draw ───────────────────────────────────────────────────────────── #
+
 
     def draw(self, screen):
         self._draw_compact(screen)

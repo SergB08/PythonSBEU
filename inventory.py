@@ -1,13 +1,10 @@
-"""
-inventory.py - Compatibility layer
-Wraps the unified inventory system for backward compatibility.
-"""
+### шар сумісності зроблений з куска старого коду, потім прибрати
 
 import pygame
 import settings
 import random
 
-# Import from the new unified system
+# імпорт з нової уніфікованої системи
 from ui.inventoryui import (
     Item, 
     make_medkit, 
@@ -20,12 +17,8 @@ from ui.inventoryui import (
     ChestContainer
 )
 
-# For backward compatibility with old code that expects these
-def get_bullet_texture():
-    """Legacy function for bullet texture."""
-    return None
 
-# Re-export commonly used functions
+# реекспорт функцій для зручності
 __all__ = [
     'Item',
     'make_medkit', 

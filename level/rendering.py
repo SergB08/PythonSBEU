@@ -33,7 +33,7 @@ def draw_world(
             ):
                 continue
 
-            # ===== FLOOR =====
+            # ПІДЛОГА
 
             if tile == FLOOR:
 
@@ -46,7 +46,7 @@ def draw_world(
                     (draw_x, draw_y)
                 )
 
-            # ===== WALL =====
+            # СТІНА
 
             elif tile == WALL:
 
@@ -57,7 +57,7 @@ def draw_world(
                     (draw_x, draw_y)
                 )
 
-    # ===== LADDER =====
+    # ЛЮК
 
     if world.ladder_x is not None:
 
@@ -99,7 +99,7 @@ def draw_minimap(screen, world, player):
         + 30
     )
 
-    # ===== MAP (cached) =====
+    # КЕШОВАНА КАРТА
 
     if _minimap_cache is None or _minimap_world_id != id(world):
         _minimap_cache    = pygame.Surface((map_w, map_h))
@@ -111,7 +111,7 @@ def draw_minimap(screen, world, player):
 
     screen.blit(_minimap_cache, (offset_x, offset_y))
 
-    # ===== PLAYER =====
+    # ГРАВЕЦЬ
 
     player_px = (
         offset_x
@@ -130,7 +130,7 @@ def draw_minimap(screen, world, player):
         3
     )
 
-    # ===== LADDER =====
+    # ЛЮК
 
     if world.ladder_x is not None:
         ladder_px = offset_x + world.ladder_x * scale

@@ -1,33 +1,29 @@
-"""
-level/safe_room.py
-
-Safe-room interactables: Bed (heal), Chest (Minecraft-style inventory),
-Level Portal (enter dungeon). Uses the same floor/wall tiles as regular levels.
-"""
-
 import pygame
 import settings
 
-INTERACT_RANGE = settings.TILE_SIZE * 1.25
+INTERACT_RANGE = settings.TILE_SIZE * 1.25  # відстань для взаємодії з об'єктом
 
 
 class SafeRoomObject:
     def __init__(self, tile_x, tile_y, label, color, size=None):
-        self.tile_x = tile_x
-        self.tile_y = tile_y
-        self.label  = label
-        self.color  = color
-        self.size   = size or (settings.TILE_SIZE, settings.TILE_SIZE)
+        self.tile_x = tile_x  # позиція об'єкта по x (в тайлах)
+        self.tile_y = tile_y  # позиція об'єкта по y (в тайлах)
+        self.label  = label   # підпис на об'єкті
+        self.color  = color   # колір прямокутника об'єкта
+        self.size   = size or (settings.TILE_SIZE, settings.TILE_SIZE)  # розмір в пікселях
 
     @property
     def world_x(self):
+        # центр об'єкта по Х у світових координатах
         return self.tile_x * settings.TILE_SIZE + self.size[0] // 2
 
     @property
     def world_y(self):
+        # центр об'єкта по У у світових координатах
         return self.tile_y * settings.TILE_SIZE + self.size[1] // 2
 
     def near(self, px, py):
+        # перевіряє чи гравець достатньо близько для взаємодії
         return (abs(px - self.world_x) < INTERACT_RANGE and
                 abs(py - self.world_y) < INTERACT_RANGE)
 
@@ -50,7 +46,8 @@ class Bed(SafeRoomObject):
                          (settings.TILE_SIZE * 2, settings.TILE_SIZE))
 
     def interact(self, player):
-        player.heal()          # fully heals all body parts
+        # повністю лікує всі частини тіла гравця
+        player.heal()
 
 
 class ChestObject(SafeRoomObject):
@@ -60,7 +57,7 @@ class ChestObject(SafeRoomObject):
         self.is_open = False
 
     def interact(self, player):
-        """Opens the player's ChestUI (Minecraft-style grid)."""
+        # відкриває інтерфейс скрині у стилі Minecraft
         self.is_open = True
         player.chest_ui.open_chest(player.inventory)
 
@@ -75,6 +72,7 @@ class LevelPortal(SafeRoomObject):
                          (settings.TILE_SIZE, settings.TILE_SIZE * 2))
 
     def interact(self, player):
+        # повертає сигнал для переходу на рівень
         return "enter_level"
 
 
@@ -83,26 +81,25 @@ class SafeRoom:
         cx = world.spawn_x
         cy = world.spawn_y
 
-        # Interactable object spawn coordinates
+        # розміщення інтерактивних об'єктів відносно точки спавну
         self.bed    = Bed(cx - 6, cy - 4)
         self.chest  = ChestObject(cx + 0, cy - -3)
         self.portal = LevelPortal(cx + 5, cy - 2)
-        #self.objects = [self.bed, self.chest, self.portal]
-        self.objects = [self.bed, self.portal] ### TEMPORARILY DISABLED THE CHEST
+        self.objects = [self.bed, self.portal]  # скриня тимчасово прихована
 
-        self._heal_msg   = 0.0
+        self._heal_msg = 0.0  # таймер повідомлення про лікування
 
     def update(self, dt, player, events):
         if self._heal_msg > 0:
             self._heal_msg -= dt
 
-        # Close chest marker when chest UI closes
+        # закриваємо маркер скрині коли UI закривається
         if not player.chest_ui.open:
             self.chest.is_open = False
 
         for e in events:
             if e.type == pygame.KEYDOWN and e.key == pygame.K_e:
-                # Don't process world interact if inventory/chest open
+                # не обробляємо взаємодію якщо відкритий інвентар або скриня
                 if player.inventory.open or player.chest_ui.open:
                     continue
                 for obj in self.objects:
@@ -111,14 +108,16 @@ class SafeRoom:
                         if result == "enter_level":
                             return "enter_level"
                         if isinstance(obj, Bed):
-                            self._heal_msg = 2.5
+                            self._heal_msg = 2.5  # показуємо повідомлення 2.5 секунди
 
         return None
 
     def draw(self, screen, camera_x, camera_y, player):
+        # малює всі об'єкти кімнати
         for obj in self.objects:
             obj.draw(screen, camera_x, camera_y)
 
+        # підказка взаємодії коли гравець поруч
         font = pygame.font.SysFont(None, 34, bold=True)
         for obj in self.objects:
             if obj.near(player.world_x, player.world_y):
@@ -132,6 +131,7 @@ class SafeRoom:
                 screen.blit(htxt, (settings.WIDTH  // 2 - htxt.get_width()  // 2,
                                    settings.HEIGHT // 2 + 80))
 
+        # повідомлення про успішне лікування
         if self._heal_msg > 0:
             mf  = pygame.font.SysFont(None, 48, bold=True)
             msg = mf.render("Fully healed!", True, (100, 255, 120))

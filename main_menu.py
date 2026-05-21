@@ -21,7 +21,7 @@ class Button:
             for e in events:
                 if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                     self.state = "click"
-                    return True   # fire immediately on press
+                    return True   # fixes shooting immediately on press
         else:
             self.state = "idle"
             
@@ -41,13 +41,10 @@ class Button:
 
 class Menu:
     def __init__(self, tex_idle, tex_hover, tex_click):
-        # ── font ──────────────────────────────────────────────
-        self.font =  pygame.font.SysFont(None, 30, bold=True)#pygame.font.Font("fonts/1.ttf", 48)
+        #font
+        self.font =  pygame.font.SysFont(None, 30, bold=True)
 
-        # ── background ────────────────────────────────────────
-        # bg_image = pygame.image.load("images/menu_bg.png").convert()
-        # self.bg = pygame.transform.scale(bg_image,
-        #                                  (settings.WIDTH, settings.HEIGHT))
+        #background
         #self.bg_color = (20, 20, 30)   # placeholder solid color
         bg_image = pygame.image.load("EFTzavod.jpg").convert()
         self.bg = pygame.transform.scale(bg_image, (settings.WIDTH, settings.HEIGHT))
@@ -66,10 +63,9 @@ class Menu:
         }
 
     def run(self, screen, events):
-        """Returns 'play' | 'settings' | 'exit' | None."""
         # background
-        # screen.blit(self.bg, (0, 0))
-        #screen.fill(self.bg_color)
+        # screen.blit(self.bg, (0, 0)) #placeholder
+        #screen.fill(self.bg_color) # placeholder
         screen.blit(self.bg, (0, 0))
         
         for name, btn in self.buttons.items():

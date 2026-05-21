@@ -3,15 +3,11 @@ import random
 import math
 import settings
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  LOOT BOX
-#  Drawn as a crate texture.
-#  Destroyed by melee hits or bullets; drops ammo / medkits.
-# ─────────────────────────────────────────────────────────────────────────────
+### Ящик з припасами, поки що випадають тільки патрони та медикаменти
 
-BOX_HP = 15  # 3 melee hits (5 each) or 5 bullet hits (3 each)
-
-BOX_SIZE   = 128  # change this value to resize
+BOX_HP    = 15     # очки здоров'я ящика
+BOX_SIZE  = 48     # розмір для перевірки меж екрану
+BOX_SCALE = 96     # розмір текстури при відмальовуванні
 
 class LootBox:
     def __init__(self, world_x, world_y):
@@ -19,21 +15,19 @@ class LootBox:
         self.world_y  = float(world_y)
         self.hp       = BOX_HP
         self.alive    = True
-        self._shaking = 0.0   # visual hit feedback
-        # Random rotation on spawn (0 to 360 degrees)
-        self.rotation = random.uniform(0, 360)
+        self._shaking = 0.0   # таймер візуального тремтіння при попаданні
+        self.rotation = random.uniform(0, 360)  # випадковий кут повороту при спавні
         
-        # Load texture
         from assets import load_lootBox_texture
         self._texture = load_lootBox_texture()
-        # Cache rotated version
+        # кешована повернута текстура щоб не рахувати кожен кадр
         self._cached_rotated = None
         self._cached_angle = None
 
-        # pre-roll loot
-        self.loot = self._roll_loot()
+        self.loot = self._roll_loot()  # заздалегідь визначає що випаде
 
     def _roll_loot(self):
+        # випадково визначає вміст ящика
         from inventory import make_medkit, make_ammo_pistol
         drops = []
         if random.random() < 0.5:
@@ -44,6 +38,7 @@ class LootBox:
         return drops
 
     def hit(self, damage=1):
+        #Викликається при ударі ближнім боєм або кулею. Повертає список предметів якщо знищено
         self._shaking = 0.25
         self.hp -= damage
         if self.hp <= 0:
@@ -52,12 +47,13 @@ class LootBox:
         return []
 
     def update(self, dt):
+        # зменшує таймер тремтіння з часом
         self._shaking = max(0, self._shaking - dt * 4)
 
     def _get_rotated_texture(self):
-        """Get cached rotated texture for current rotation."""
+        #Повертає кешовану повернуту текстуру для поточного кута
         if self._cached_rotated is None or self._cached_angle != self.rotation:
-            scaled = pygame.transform.scale(self._texture, (BOX_SIZE, BOX_SIZE))
+            scaled = pygame.transform.scale(self._texture, (BOX_SCALE, BOX_SCALE))
             self._cached_rotated = pygame.transform.rotate(scaled, self.rotation)
             self._cached_angle = self.rotation
         return self._cached_rotated
@@ -68,20 +64,19 @@ class LootBox:
         sx = int(self.world_x - camera_x)
         sy = int(self.world_y - camera_y)
 
-        # cull
-        if sx < -BOX_SIZE or sx > settings.WIDTH + BOX_SIZE:
+        # culling - не малювати якщо поза екраном
+        if sx < -BOX_SCALE or sx > settings.WIDTH + BOX_SCALE:
             return
-        if sy < -BOX_SIZE or sy > settings.HEIGHT + BOX_SIZE:
+        if sy < -BOX_SCALE or sy > settings.HEIGHT + BOX_SCALE:
             return
 
-        # shake offset
+        # зміщення при тремтінні після попадання
         shake_x = 0
         shake_y = 0
         if self._shaking > 0:
             shake_x = int(math.sin(self._shaking * 80) * 3)
             shake_y = int(math.cos(self._shaking * 80) * 2)
 
-        # Get rotated texture
         rotated_texture = self._get_rotated_texture()
         rect = rotated_texture.get_rect(center=(sx + shake_x, sy + shake_y))
         screen.blit(rotated_texture, rect.topleft)
