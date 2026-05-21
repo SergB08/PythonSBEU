@@ -87,7 +87,8 @@ class SafeRoom:
         self.bed    = Bed(cx - 6, cy - 4)
         self.chest  = ChestObject(cx + 0, cy - -3)
         self.portal = LevelPortal(cx + 5, cy - 2)
-        self.objects = [self.bed, self.chest, self.portal]
+        #self.objects = [self.bed, self.chest, self.portal]
+        self.objects = [self.bed, self.portal] ### TEMPORARILY DISABLED THE CHEST
 
         self._heal_msg   = 0.0
 

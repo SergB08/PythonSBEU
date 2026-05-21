@@ -88,9 +88,15 @@ def _get_pause_menu() -> PauseMenu:
 def init_game(floor_tiles, existing_player=None):
     playerLegsIdleAnim, playerLegsWalkAnim, playerHead, playerBody, playerBodyPistol = load_player_sprites2()
     w      = generate_world(len(floor_tiles))
-    player = Player(playerHead, playerBody, playerBodyPistol,
-                    playerLegsIdleAnim["legsIdleAnim"],
-                    playerLegsWalkAnim["legsWalkAnim"])
+    if existing_player is None:
+        player = Player(playerHead, playerBody, playerBodyPistol,
+                        playerLegsIdleAnim["legsIdleAnim"],
+                        playerLegsWalkAnim["legsWalkAnim"])
+    else:
+        player = existing_player
+        player.bullets = []
+        player.muzzle_flashes = []
+
     player.world_x = w.spawn_x * settings.TILE_SIZE
     player.world_y = w.spawn_y * settings.TILE_SIZE
 
@@ -285,6 +291,9 @@ def run_safe_room(screen, dt, events, world, player, safe_room,
     if result == "enter_level":
         new_world, new_player = init_game(floor_tiles, existing_player=player)
         new_world.level = 1
+        #print("inventory before:", player.inventory.count_item("ammo_pistol"))
+        #new_world, new_player = init_game(floor_tiles, existing_player=player)
+        #print("inventory after:", new_player.inventory.count_item("ammo_pistol"))
         return "playing", new_world, new_player, safe_room
 
     return "safe_room", world, player, safe_room
@@ -428,6 +437,7 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                     if math.hypot(dx, dy) < 60:
                         player.body.take_damage_any(bullet.DAMAGE)
                         bullet.alive = False
+                        hit_something = True
                     
                     if not hit_something and bullet.alive:
                         for box in world.loot_boxes[:]:
