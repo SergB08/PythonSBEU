@@ -9,7 +9,8 @@ import settings
 #  Destroyed by melee hits or bullets; drops ammo / medkits.
 # ─────────────────────────────────────────────────────────────────────────────
 
-BOX_HP     = 3      # melee hits to break (bullets do more damage)
+BOX_HP = 15  # 3 melee hits (5 each) or 5 bullet hits (3 each)
+
 BOX_SIZE   = 128  # change this value to resize
 
 class LootBox:
@@ -43,7 +44,6 @@ class LootBox:
         return drops
 
     def hit(self, damage=1):
-        """Called by melee attack or bullets. Returns list of items if broken."""
         self._shaking = 0.25
         self.hp -= damage
         if self.hp <= 0:

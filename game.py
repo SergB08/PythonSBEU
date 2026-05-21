@@ -484,7 +484,7 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
                             dx = bullet.x - box.world_x
                             dy = bullet.y - box.world_y
                             if abs(dx) < 50 and abs(dy) < 50:
-                                loot_items = box.hit(bullet.DAMAGE)
+                                loot_items = box.hit(3)
                                 for item in loot_items:
                                     world.loot_items.append(
                                         LootItem(box.world_x, box.world_y, item)
@@ -507,13 +507,15 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
         world.loot_items = [l for l in world.loot_items if l.alive]
 
         # Check melee hit on loot boxes
-        if mouse_buttons[0] and player.weapon == "melee":
+        melee_clicked = any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1
+                            for e in filtered_events)
+        if melee_clicked and player.weapon == "melee":
             for box in world.loot_boxes[:]:
                 if box.alive:
                     dx = box.world_x - player.world_x
                     dy = box.world_y - player.world_y
                     if abs(dx) < 80 and abs(dy) < 80:
-                        loot_items = box.hit(1)
+                        loot_items = box.hit(5)
                         for item in loot_items:
                             world.loot_items.append(LootItem(box.world_x, box.world_y, item))
         world.loot_boxes = [b for b in world.loot_boxes if b.alive]
