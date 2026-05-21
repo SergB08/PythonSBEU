@@ -348,7 +348,8 @@ def run_game(screen, dt, events, world, player, floor_tiles, wall_tiles, ladder_
 
     near_ladder         = False
     near_ladder_blocked = False
-    all_turrets_dead    = all(not t.alive for t in world.turrets)
+    all_turrets_dead    = (all(not t.alive for t in world.turrets) and
+                        all(not s.alive for s in world.slimes))
 
     if world.ladder_x is not None:
         dx    = player.world_x - (world.ladder_x * settings.TILE_SIZE + settings.TILE_SIZE * 2)

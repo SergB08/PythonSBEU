@@ -15,6 +15,7 @@ screen = pygame.display.set_mode((settings.WIDTH, settings.HEIGHT))
 tick   = TickRate(settings.FPS)
 
 icon, floor_tiles, wall_tiles, ladder = load_assets()
+pygame.display.set_caption("Escape from the Loop")  # Add this line to change window title
 pygame.display.set_icon(icon)
 
 btn_idle, btn_hover, btn_click = load_menu_textures()

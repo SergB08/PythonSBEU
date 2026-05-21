@@ -23,8 +23,8 @@ def get_death_sound():
 def load_assets():
 
     icon = pygame.image.load(
-        "textures/icon.png"
-    ).convert()
+        "textures/slimeTemp.png"
+    ).convert_alpha()
 
     floor_tiles = []
     floor_path = "textures/floor"
@@ -48,7 +48,7 @@ def load_assets():
             img = pygame.transform.scale(img, (settings.TILE_SIZE, settings.TILE_SIZE))
             wall_tiles.append(img)
 
-    ladder = pygame.image.load("textures/exit.png").convert()
+    ladder = pygame.image.load("textures/exit.png").convert_alpha()
     ladder = pygame.transform.scale(ladder, (settings.TILE_SIZE, settings.TILE_SIZE))
 
     return icon, floor_tiles, wall_tiles, ladder
